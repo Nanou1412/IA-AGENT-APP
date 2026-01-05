@@ -223,6 +223,7 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withRequestContext
 }
 
 // ============================================================================
@@ -425,7 +426,7 @@ async function handleInvoicePaymentFailed(
   // Phase 8: Send alert for payment failure (BLOQUANT 6)
   await alertStripePaymentFailure(
     orgId,
-    invoice.payment_intent as string || invoice.id,
+    invoice.id,
     `Invoice payment failed after ${invoice.attempt_count} attempts`
   );
   

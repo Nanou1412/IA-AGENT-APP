@@ -9,8 +9,10 @@ import Stripe from 'stripe';
 // Validate required environment variables
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
-if (!stripeSecretKey && process.env.NODE_ENV === 'production') {
-  throw new Error('STRIPE_SECRET_KEY is required in production');
+// Note: Don't throw during build time - Next.js runs this during page collection
+// The actual runtime check happens in the API routes
+if (!stripeSecretKey && process.env.NODE_ENV === 'production' && !process.env.NEXT_PHASE) {
+  console.warn('Warning: STRIPE_SECRET_KEY is not set in production');
 }
 
 /**

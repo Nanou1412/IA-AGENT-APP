@@ -34,7 +34,7 @@ import { canUseModuleWithKillSwitch } from '@/lib/feature-gating';
 import { handleInboundMessage, isOpenAIConfigured } from '@/engine';
 import { withRequestContext, getCorrelationId, logWithContext, generateCorrelationId } from '@/lib/correlation';
 import { checkAbuse, handleAbuse, isSessionBlocked } from '@/lib/abuse';
-import { checkOrgRateLimit } from '@/engine/rate-limiter';
+import { checkRateLimit } from '@/engine/rate-limiter';
 import { checkFeature, FeatureFlag } from '@/lib/feature-flags';
 import { increment, METRIC_NAMES, recordTwilioSms } from '@/lib/metrics';
 
@@ -154,14 +154,14 @@ export async function POST(req: NextRequest) {
     // ========================================================================
     // PHASE 8: Rate Limit Check (BLOQUANT 3)
     // ========================================================================
-    const rateLimitResult = await checkOrgRateLimit(orgId, 'message');
+    const rateLimitResult = checkRateLimit(orgId);
     if (!rateLimitResult.allowed) {
-      logWithContext('warn', 'Rate limit exceeded', { orgId, type: 'message' });
+      logWithContext('warn', 'Rate limit exceeded', { orgId, reason: rateLimitResult.reason });
       await logTwilioAudit('twilio.message.rate_limited', {
         messageSid: MessageSid,
         channel: CHANNEL,
-        currentCount: rateLimitResult.currentCount,
-        limit: rateLimitResult.limit,
+        reason: rateLimitResult.reason,
+        resetInMs: rateLimitResult.resetInMs,
       }, { orgId });
       increment(METRIC_NAMES.RATE_LIMIT_EXCEEDED, { orgId, type: 'message' });
       return new NextResponse(

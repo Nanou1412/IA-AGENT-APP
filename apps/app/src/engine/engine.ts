@@ -330,6 +330,18 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
         bookingConfig: null, // Phase 7.1 - booking config
         takeawayConfig: null, // Phase 7.2 - takeaway config
         takeawayPaymentConfig: null, // Phase 7.3 - payment config
+        // Phase 8: Production Readiness fields
+        monthlyAiBudgetUsd: 50,
+        monthlyTwilioBudgetUsd: 30,
+        hardBudgetLimit: true,
+        maxEngineRunsPerMinute: 60,
+        maxMessagesPerMinute: 30,
+        aiDisabled: false,
+        smsDisabled: false,
+        voiceDisabled: false,
+        bookingDisabled: false,
+        takeawayDisabled: false,
+        paymentDisabled: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

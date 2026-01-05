@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
     
     if (abuseResult.abusive) {
       logWithContext('warn', 'Abuse detected', { orgId, sessionId, reason: abuseResult.reason });
-      await handleAbuse(orgId, sessionId, abuseResult.reason || 'spam_detected');
+      await handleAbuse(orgId, sessionId, abuseResult);
       increment(METRIC_NAMES.ABUSE_DETECTED, { orgId, channel: 'whatsapp' });
       
       await logTwilioAudit('twilio.message.abuse_blocked', {
