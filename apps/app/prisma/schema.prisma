@@ -1,0 +1,799 @@
+// Prisma schema for IA Agent App
+// Multi-industry AI agent templates and assignments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  accounts    Account[]
+  sessions    Session[]
+
+  @@index([email])
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth Verification Token
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Membership role enum
+enum MembershipRole {
+  owner
+  manager
+  staff
+}
+
+// Membership links users to orgs
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  orgId     String
+  role      MembershipRole @default(staff)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([userId])
+  @@index([orgId])
+}
+
+// Sandbox status enum
+enum SandboxStatus {
+  sandbox_required
+  sandbox_in_progress
+  ready_for_review
+  approved
+  revoked
+}
+
+// Sensitive modules status enum
+enum SensitiveModulesStatus {
+  disabled
+  pending_review
+  enabled
+}
+
+// Onboarding step status enum
+enum OnboardingStepStatus {
+  todo
+  in_progress
+  done
+  blocked
+}
+
+// Billing status enum
+enum BillingStatus {
+  inactive // No billing setup
+  incomplete // Checkout started but not completed
+  active // Subscription active and paid
+  past_due // Payment failed, grace period
+  canceled // Subscription canceled
+}
+
+// Channel enum (messaging + voice)
+enum MessagingChannel {
+  sms
+  whatsapp
+  voice
+}
+
+// Message direction enum
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+// Call direction enum
+enum CallDirection {
+  inbound
+  outbound
+}
+
+// Org settings - one per org
+model OrgSettings {
+  id                     String                 @id @default(cuid())
+  orgId                  String                 @unique
+  sandboxStatus          SandboxStatus          @default(sandbox_required)
+  sensitiveModulesStatus SensitiveModulesStatus @default(disabled)
+
+  // Billing fields
+  stripeCustomerId     String?       @unique
+  stripeSubscriptionId String?       @unique
+  billingStatus        BillingStatus @default(inactive)
+  setupFeePaidAt       DateTime?
+  currentPeriodEnd     DateTime?
+
+  // Messaging module flags
+  smsEnabled      Boolean @default(false)
+  whatsappEnabled Boolean @default(false)
+
+  // Messaging text configuration (Phase 4 Hardening)
+  messagingLocale         String  @default("en-AU")
+  defaultInboundReplyText String? // Custom acknowledgment message
+  deniedReplyText         String? // Message when access denied
+  handoffReplyText        String? // Message for handoff scenarios
+
+  // Handoff configuration (Phase 4 Hardening)
+  handoffPhone String? // Phone number for escalation
+  handoffEmail String? // Email for escalation
+  handoffSmsTo String? // Internal SMS notification number
+
+  // Voice module configuration (Phase 5)
+  voiceEnabled      Boolean @default(false) // Org toggle for voice
+  callQueueEnabled  Boolean @default(true) // Enable call queue
+  callWelcomeText   String? // Initial greeting (e.g., "Thanks for calling...")
+  callQueueWaitText String? // Message during queue wait
+  callDenyText      String? // Message when access denied
+  callHandoffNumber String? // Human handoff number (e.g., restaurant main line)
+  recordCalls       Boolean @default(false) // Enable call recording (privacy)
+
+  // AI Engine configuration (Phase 6)
+  faqText         String? @db.Text // FAQ/knowledge base text for the org
+  aiModelOverride String? // Override default OpenAI model per org
+
+  // Booking configuration (Phase 7.1)
+  // Structure: { calendar: { calendarId, timezone, defaultDurationMinutes, minNoticeMinutes, maxPartySize, allowModify, allowCancel, requirePhone, requireName }, confirmations: { autoConfirm, sendSmsConfirmation } }
+  bookingConfig Json? // Booking rules and settings
+
+  // Takeaway/Order configuration (Phase 7.2)
+  // Structure: { enabled, defaultPickupMode, minNoticeMinutes, maxItems, requireName, requirePhone, confirmation: {...}, notifications: {...}, draft: {...}, templates: {...} }
+  takeawayConfig Json? // Takeaway order rules and settings
+
+  // Takeaway Payment configuration (Phase 7.3)
+  // Structure: { enabled, requiredByDefault, expiresMinutes, allowDisable, retry: {...}, currency, productName, pricingMode, messages: {...} }
+  takeawayPaymentConfig Json? // Payment settings for takeaway orders
+
+  // ==========================================================================
+  // Phase 8: Production Readiness
+  // ==========================================================================
+
+  // Cost Budgets
+  monthlyAiBudgetUsd     Float?  @default(50) // Monthly AI/LLM budget in USD
+  monthlyTwilioBudgetUsd Float?  @default(30) // Monthly Twilio budget in USD
+  hardBudgetLimit        Boolean @default(true) // If true, block when budget exceeded
+
+  // Rate Limits
+  maxEngineRunsPerMinute Int? @default(60) // Max engine runs per minute
+  maxMessagesPerMinute   Int? @default(30) // Max messages per minute
+
+  // Kill Switches (admin controls)
+  aiDisabled       Boolean @default(false) // Disable AI engine
+  smsDisabled      Boolean @default(false) // Admin disable SMS
+  voiceDisabled    Boolean @default(false) // Admin disable Voice
+  bookingDisabled  Boolean @default(false) // Disable booking module
+  takeawayDisabled Boolean @default(false) // Disable takeaway module
+  paymentDisabled  Boolean @default(false) // Disable payment processing
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org              Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  channelEndpoints ChannelEndpoint[]
+  messageLogs      MessageLog[]
+  callLogs         CallLog[]
+  monthlyCosts     MonthlyOrgCost[]
+}
+
+// Monthly cost tracking per organization (Phase 8)
+model MonthlyOrgCost {
+  id            String @id @default(cuid())
+  orgId         String
+  month         String // Format: YYYY-MM
+  aiCostUsd     Float  @default(0)
+  twilioCostUsd Float  @default(0)
+  stripeFeesUsd Float  @default(0)
+  totalCostUsd  Float  @default(0)
+
+  // Counters for tracking
+  aiTokensInput  Int   @default(0)
+  aiTokensOutput Int   @default(0)
+  smsCount       Int   @default(0)
+  voiceMinutes   Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgSettings OrgSettings @relation(fields: [orgId], references: [orgId], onDelete: Cascade)
+
+  @@unique([orgId, month])
+  @@index([month])
+}
+
+// Channel endpoint - Twilio phone number linked to an org
+model ChannelEndpoint {
+  id                String           @id @default(cuid())
+  orgId             String
+  channel           MessagingChannel
+  twilioPhoneNumber String // e.g., "+61412345678" or "whatsapp:+61412345678"
+  friendlyName      String? // Optional display name
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  orgSettings OrgSettings  @relation(fields: [orgId], references: [orgId], onDelete: Cascade)
+  messageLogs MessageLog[]
+  callLogs    CallLog[]
+
+  @@unique([channel, twilioPhoneNumber])
+  @@index([orgId, channel])
+  @@index([twilioPhoneNumber])
+}
+
+// Message log - tracks all inbound/outbound messages
+model MessageLog {
+  id               String           @id @default(cuid())
+  orgId            String
+  endpointId       String? // nullable for unmapped inbound
+  channel          MessagingChannel
+  direction        MessageDirection
+  twilioMessageSid String?          @unique // Twilio message SID for idempotency
+  from             String
+  to               String
+  body             String           @db.Text
+  status           String? // queued/sent/delivered/failed/twiml
+  errorCode        String?
+  errorMessage     String?
+  raw              Json             @default("{}") // Raw Twilio payload
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  orgSettings     OrgSettings?     @relation(fields: [orgId], references: [orgId], onDelete: Cascade)
+  channelEndpoint ChannelEndpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([channel])
+  @@index([direction])
+  @@index([twilioMessageSid])
+  @@index([createdAt])
+  @@index([orgId, createdAt]) // Phase 8: For rate limiting queries
+  @@index([orgId, direction, createdAt]) // Phase 8: For directional rate limiting
+}
+
+// Call log - tracks all inbound/outbound voice calls (Phase 5)
+model CallLog {
+  id              String        @id @default(cuid())
+  orgId           String? // nullable if org not resolved
+  endpointId      String? // nullable for unmapped inbound
+  twilioCallSid   String        @unique // Twilio call SID for idempotency
+  from            String
+  to              String
+  direction       CallDirection @default(inbound)
+  status          String? // initiated/ringing/in-progress/completed/busy/failed/no-answer/canceled
+  blockedBy       String? // sandbox/billing/industry/config/unknown (if denied)
+  denyReason      String? // Human-readable deny reason
+  startedAt       DateTime      @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+  recordingUrl    String? // URL to recording if enabled
+  raw             Json          @default("{}") // Raw Twilio payload
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  orgSettings     OrgSettings?     @relation(fields: [orgId], references: [orgId], onDelete: Cascade)
+  channelEndpoint ChannelEndpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([twilioCallSid])
+  @@index([status])
+  @@index([startedAt])
+  @@index([createdAt])
+}
+
+// Audit log for tracking all state changes
+model AuditLog {
+  id          String   @id @default(cuid())
+  orgId       String? // nullable for global admin actions
+  actorUserId String
+  action      String // e.g., "sandbox.started", "production.approved"
+  details     Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([actorUserId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// Stripe event tracking for idempotency
+// Prevents duplicate processing of the same webhook event
+model StripeEvent {
+  id            String    @id @default(cuid())
+  stripeEventId String    @unique // Stripe event ID (evt_xxx)
+  type          String // Event type (e.g., "invoice.paid")
+  orgId         String? // Resolved org ID (nullable for unmapped events)
+  processed     Boolean   @default(false)
+  processedAt   DateTime?
+  raw           Json      @default("{}") // Raw event data for debugging
+  createdAt     DateTime  @default(now())
+
+  @@index([stripeEventId])
+  @@index([orgId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Org onboarding step progression
+model OrgOnboardingStep {
+  id        String               @id @default(cuid())
+  orgId     String
+  stepKey   String // e.g., "sandbox_intro_seen", "business_profile"
+  status    OnboardingStepStatus @default(todo)
+  metadata  Json                 @default("{}")
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([orgId, stepKey])
+  @@index([orgId])
+  @@index([stepKey])
+}
+
+// Organisation / tenant
+model Org {
+  id               String   @id @default(cuid())
+  name             String
+  industry         String // e.g., "restaurant", "hotel", "tradie"
+  timezone         String   @default("Australia/Sydney")
+  industryConfigId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  industryConfig IndustryConfig?   @relation(fields: [industryConfigId], references: [id])
+  assignments    AgentAssignment[]
+  memberships    Membership[]
+  settings       OrgSettings?
+
+  @@index([industry])
+  @@index([industryConfigId])
+}
+
+// Industry-specific configuration and rules
+model IndustryConfig {
+  id                     String  @id @default(cuid())
+  slug                   String  @unique // e.g., "restaurant", "hotel", "tradie"
+  title                  String
+  rulesJson              Json    @default("{}") // Structured rules per industry
+  defaultTemplateSlug    String? // e.g., "restaurant" - matches AgentTemplate.slug
+  defaultTemplateVersion String? // e.g., "1.0.0" - semver
+  onboardingSteps        Json    @default("[]") // Array of step keys for this industry
+
+  // Module availability per industry (Phase 4 Hardening)
+  // Structure: { sms: boolean, whatsapp: boolean, voice: boolean, payment: boolean }
+  modules Json @default("{\"sms\": true, \"whatsapp\": true, \"voice\": false, \"payment\": true}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgs Org[]
+
+  @@index([slug])
+}
+
+// Versioned agent templates per industry
+model AgentTemplate {
+  id              String @id @default(cuid())
+  slug            String // e.g., "restaurant"
+  version         String // semver e.g., "1.0.0"
+  title           String
+  systemPrompt    String @db.Text
+  intentsAllowed  Json   @default("[]") // JSON array of allowed intents
+  modulesDefault  Json   @default("[]") // JSON array of default modules
+  handoffTriggers Json   @default("[]") // JSON array of handoff triggers
+  settingsSchema  Json   @default("{}") // Zod-like JSON schema for settings
+
+  // Engine configuration (Phase 6)
+  // Rules: { neverSayAI, handoffOnLowConfidence, confidenceThreshold, maxTurns, style }
+  definition Json @default("{}") // Complete engine configuration
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments AgentAssignment[]
+
+  @@unique([slug, version])
+  @@index([slug])
+}
+
+// Assignment status enum
+enum AssignmentStatus {
+  pending
+  active
+  rolled_back
+}
+
+// Conversation session status enum
+enum ConversationSessionStatus {
+  active
+  closed
+}
+
+// Conversation turn role enum
+enum ConversationTurnRole {
+  user
+  assistant
+  system
+  tool
+}
+
+// Engine run status enum
+enum EngineRunStatus {
+  success
+  handoff
+  blocked
+  error
+}
+
+// Integration provider enum (Phase 7.1)
+enum IntegrationProvider {
+  google
+}
+
+// Integration status enum (Phase 7.1)
+enum IntegrationStatus {
+  connected
+  disconnected
+  error
+}
+
+// Booking request action enum (Phase 7.1)
+enum BookingAction {
+  check
+  create
+  modify
+  cancel
+}
+
+// Booking request status enum (Phase 7.1)
+enum BookingRequestStatus {
+  success
+  blocked
+  error
+  handoff
+}
+
+// Links an org to a specific template version
+model AgentAssignment {
+  id              String           @id @default(cuid())
+  orgId           String
+  templateId      String
+  templateVersion String
+  status          AssignmentStatus @default(pending)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  org      Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  template AgentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([templateId])
+  @@index([status])
+}
+
+// ============================================================================
+// AI ENGINE MODELS (Phase 6)
+// ============================================================================
+
+// Conversation session - tracks a conversation thread
+model ConversationSession {
+  id                String                    @id @default(cuid())
+  orgId             String
+  channel           MessagingChannel
+  contactKey        String // Normalized phone/identifier of the contact
+  externalThreadKey String? // Optional: CallSid, thread ID, etc.
+  status            ConversationSessionStatus @default(active)
+  lastActiveAt      DateTime                  @default(now())
+  metadata          Json                      @default("{}") // lastIntent, flags, collected data
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  turns      ConversationTurn[]
+  engineRuns EngineRun[]
+
+  @@unique([orgId, channel, contactKey])
+  @@index([orgId])
+  @@index([channel])
+  @@index([contactKey])
+  @@index([status])
+  @@index([lastActiveAt])
+}
+
+// Conversation turn - individual message in a conversation
+model ConversationTurn {
+  id        String               @id @default(cuid())
+  sessionId String
+  role      ConversationTurnRole
+  channel   MessagingChannel
+  text      String               @db.Text
+  raw       Json                 @default("{}") // Minimal payload reference
+  createdAt DateTime             @default(now())
+
+  session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([sessionId])
+  @@index([role])
+}
+
+// Engine run - tracks each AI engine invocation
+model EngineRun {
+  id               String          @id @default(cuid())
+  orgId            String? // Phase 8: Added for rate limiting queries
+  sessionId        String
+  agentTemplateId  String?
+  industryConfigId String?
+  modelUsed        String
+  inputTokens      Int?
+  outputTokens     Int?
+  costUsd          Float? // Optional cost tracking
+  decision         Json            @default("{}") // intent, confidence, selectedModules
+  status           EngineRunStatus @default(success)
+  blockedBy        String? // sandbox/billing/industry/config/rate_limit
+  errorMessage     String?
+  durationMs       Int? // Processing duration
+  createdAt        DateTime        @default(now())
+
+  session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([agentTemplateId])
+  @@index([orgId, createdAt]) // Phase 8: For rate limiting queries
+}
+
+// ============================================================================
+// INTEGRATION MODELS (Phase 7.1)
+// ============================================================================
+
+// Org integration - stores OAuth tokens for external services
+model OrgIntegration {
+  id                    String              @id @default(cuid())
+  orgId                 String
+  provider              IntegrationProvider
+  status                IntegrationStatus   @default(disconnected)
+  accessTokenEncrypted  String?             @db.Text // AES-256-GCM encrypted
+  refreshTokenEncrypted String?             @db.Text // AES-256-GCM encrypted
+  tokenExpiry           DateTime?
+  scope                 String?
+  metadata              Json                @default("{}") // googleUserEmail, calendarId, timezone
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@unique([orgId, provider])
+  @@index([orgId])
+  @@index([provider])
+  @@index([status])
+}
+
+// Booking request log - audit trail for all booking operations
+model BookingRequestLog {
+  id             String               @id @default(cuid())
+  orgId          String
+  sessionId      String?
+  action         BookingAction
+  idempotencyKey String?              @unique // sha256 hash for deduplication
+  eventId        String? // Google Calendar event ID (for create success)
+  input          Json                 @default("{}") // Request details (no tokens!)
+  result         Json                 @default("{}") // Response summary (no tokens!)
+  status         BookingRequestStatus
+  reason         String? // Handoff/error reason
+  createdAt      DateTime             @default(now())
+
+  @@index([orgId])
+  @@index([sessionId])
+  @@index([action])
+  @@index([status])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+}
+
+// ============================================================================
+// ORDER MODELS (Phase 7.2 - Takeaway)
+// ============================================================================
+
+// Order status enum
+enum OrderStatus {
+  draft // Being built from conversation
+  pending_confirmation // Waiting for customer YES
+  pending_payment // Waiting for payment (Phase 7.3)
+  confirmed // Customer confirmed, order placed
+  expired // Draft or pending expired
+  canceled // Canceled (requires handoff)
+}
+
+// Order payment status enum (Phase 7.3)
+enum OrderPaymentStatus {
+  not_required // Payment not required for this order
+  pending // Waiting for payment
+  paid // Payment completed
+  failed // Payment failed
+  expired // Payment link expired
+  canceled // Payment canceled
+}
+
+// Order payment link status enum (Phase 7.3)
+enum OrderPaymentLinkStatus {
+  active // Link is active and usable
+  completed // Payment completed via this link
+  expired // Link expired
+  canceled // Link canceled
+}
+
+// Order event type enum
+enum OrderEventType {
+  draft_created
+  draft_updated
+  confirmation_requested
+  confirmed
+  expired
+  canceled
+  handoff_triggered
+  notification_sent
+  notification_failed
+  error
+  // Phase 7.3: Payment events
+  pending_payment
+  payment_link_created
+  payment_paid
+  payment_failed
+  payment_expired
+  payment_retry_link_created
+  payment_canceled
+}
+
+// Order - takeaway/delivery order from customer
+model Order {
+  id        String      @id @default(cuid())
+  orgId     String
+  sessionId String? // ConversationSession ID
+  channel   String // sms | whatsapp | voice
+  status    OrderStatus @default(draft)
+
+  // Customer info
+  customerName  String?
+  customerPhone String
+  customerEmail String? // Customer email for confirmations/receipts
+
+  // Pickup/delivery details
+  pickupTime DateTime? // Requested pickup time (null = ASAP)
+  pickupMode String? // "asap" | "time"
+  notes      String? // Special instructions
+
+  // Order summary
+  totalItems  Int    @default(0)
+  summaryText String @db.Text // Snapshot shown to customer
+
+  // Idempotency
+  idempotencyKey String @unique
+
+  // Payment (Phase 7.3)
+  paymentRequired     Boolean            @default(true)
+  paymentStatus       OrderPaymentStatus @default(pending)
+  paymentAmountCents  Int? // Total in cents (null if not_required)
+  paymentCurrency     String             @default("AUD")
+  paymentDueAt        DateTime? // When payment link expires
+  paymentPaidAt       DateTime? // When payment was completed
+  paymentReceiptEmail String? // Customer email for Stripe receipt
+  paymentAttemptCount Int                @default(0)
+  lastPaymentError    String? // Last payment error message
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime? // When customer confirmed
+  expiredAt   DateTime? // When order expired
+
+  // Relations
+  items        OrderItem[]
+  eventLogs    OrderEventLog[]
+  paymentLinks OrderPaymentLink[]
+
+  @@index([orgId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([customerPhone])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+  @@index([paymentStatus])
+  @@index([paymentDueAt])
+}
+
+// OrderPaymentLink - Stripe Checkout Session for order payment (Phase 7.3)
+model OrderPaymentLink {
+  id                      String                 @id @default(cuid())
+  orderId                 String
+  stripeCheckoutSessionId String                 @unique
+  stripePaymentIntentId   String?                @unique
+  url                     String                 @db.Text
+  status                  OrderPaymentLinkStatus @default(active)
+  expiresAt               DateTime
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// OrderItem - individual item in an order
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  name      String // Item name (e.g., "Burger")
+  quantity  Int      @default(1)
+  options   Json? // { size: "large", extras: ["cheese", "bacon"] }
+  notes     String? // Item-specific notes
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// OrderEventLog - audit trail for order lifecycle events
+model OrderEventLog {
+  id        String         @id @default(cuid())
+  orderId   String
+  type      OrderEventType
+  details   Json           @default("{}") // Event-specific data
+  createdAt DateTime       @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
+}

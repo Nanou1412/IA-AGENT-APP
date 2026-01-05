@@ -1,0 +1,21 @@
+{
+  "name": "ia-agent-app",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel --filter=@repo/marketing --filter=@repo/app dev",
+    "build": "pnpm run --recursive build",
+    "lint": "pnpm run --recursive lint",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:studio": "pnpm --filter=@repo/app exec prisma studio",
+    "db:migrate": "pnpm --filter=@repo/app exec prisma migrate dev",
+    "db:seed": "pnpm --filter=@repo/app exec prisma db seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

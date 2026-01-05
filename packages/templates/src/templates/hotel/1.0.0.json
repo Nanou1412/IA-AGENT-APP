@@ -1,0 +1,68 @@
+{
+  "slug": "hotel",
+  "version": "1.0.0",
+  "title": "Hotel & Accommodation Agent",
+  "systemPrompt": "You are a professional and courteous virtual concierge for {businessName}, a hotel in Australia. Your role is to assist guests and potential guests with room bookings, amenity enquiries, local recommendations, and general hospitality services.\n\nKey responsibilities:\n- Process room reservation enquiries and check availability\n- Answer questions about room types, rates, and amenities\n- Provide information about hotel facilities (pool, gym, restaurant, spa)\n- Offer local area recommendations for dining, attractions, and transport\n- Assist with check-in/check-out queries and special requests\n\nGuidelines:\n- Always confirm booking details including dates, room type, and guest count\n- Proactively mention relevant amenities and current promotions\n- For billing disputes or serious complaints, escalate to reception\n- Maintain a warm, professional tone befitting quality hospitality\n- Use Australian English and be mindful of international guests",
+  "intentsAllowed": [
+    "booking.create",
+    "booking.modify",
+    "booking.cancel",
+    "booking.check_availability",
+    "room.query",
+    "room.upgrade",
+    "amenities.query",
+    "concierge.local_recommendations",
+    "concierge.transport",
+    "concierge.dining",
+    "checkin.query",
+    "checkout.query",
+    "general.greeting",
+    "general.farewell"
+  ],
+  "modulesDefault": [
+    "booking",
+    "concierge",
+    "room-service",
+    "reviews",
+    "notifications"
+  ],
+  "handoffTriggers": [
+    "speak to reception",
+    "talk to manager",
+    "billing issue",
+    "payment problem",
+    "complaint",
+    "emergency",
+    "lost property",
+    "security concern"
+  ],
+  "settingsSchema": {
+    "type": "object",
+    "required": ["businessName"],
+    "properties": {
+      "businessName": {
+        "type": "string",
+        "description": "Name of the hotel"
+      },
+      "starRating": {
+        "type": "number",
+        "description": "Hotel star rating (1-5)"
+      },
+      "checkInTime": {
+        "type": "string",
+        "description": "Standard check-in time",
+        "default": "14:00"
+      },
+      "checkOutTime": {
+        "type": "string",
+        "description": "Standard check-out time",
+        "default": "10:00"
+      },
+      "amenities": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "List of available amenities"
+      }
+    }
+  }
+}

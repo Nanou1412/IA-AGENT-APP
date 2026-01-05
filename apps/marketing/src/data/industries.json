@@ -1,0 +1,55 @@
+{
+  "industries": [
+    {
+      "slug": "restaurant",
+      "title": "Restaurant",
+      "subtitle": "AI-powered booking and customer service for hospitality venues",
+      "description": "Transform your restaurant operations with intelligent AI agents that handle reservations, answer menu queries, and provide exceptional customer service around the clock.",
+      "bullets": [
+        "24/7 automated table reservations and waitlist management",
+        "Instant menu and dietary requirement responses",
+        "Special event and large group booking handling",
+        "Integration with popular POS and booking systems",
+        "Multi-language support for international guests"
+      ],
+      "primaryCTA": "Get Started Free",
+      "secondaryCTA": "See Demo",
+      "recommendedModules": ["booking", "menu", "reviews", "notifications", "analytics"],
+      "icon": "🍽️"
+    },
+    {
+      "slug": "hotel",
+      "title": "Hotel & Accommodation",
+      "subtitle": "Elevate guest experience with intelligent concierge services",
+      "description": "Provide world-class guest experiences with AI concierge services that handle bookings, room service requests, and local recommendations seamlessly.",
+      "bullets": [
+        "Real-time room availability and booking management",
+        "Virtual concierge for guest inquiries and requests",
+        "Room service and amenity ordering automation",
+        "Local attraction and dining recommendations",
+        "Check-in/check-out assistance and reminders"
+      ],
+      "primaryCTA": "Get Started Free",
+      "secondaryCTA": "Book a Demo",
+      "recommendedModules": ["booking", "concierge", "room-service", "reviews", "notifications"],
+      "icon": "🏨"
+    },
+    {
+      "slug": "tradie",
+      "title": "Trades & Services",
+      "subtitle": "Never miss a job enquiry with automated quote and scheduling",
+      "description": "Keep your business running smoothly while you're on the tools. Our AI handles customer enquiries, provides quotes, and schedules jobs automatically.",
+      "bullets": [
+        "Automated quote requests and job enquiries",
+        "Smart scheduling with calendar integration",
+        "After-hours enquiry handling",
+        "Customer follow-up and review collection",
+        "Job progress updates and notifications"
+      ],
+      "primaryCTA": "Start Free Trial",
+      "secondaryCTA": "Learn More",
+      "recommendedModules": ["quoting", "scheduling", "notifications", "reviews", "invoicing"],
+      "icon": "🔧"
+    }
+  ]
+}
