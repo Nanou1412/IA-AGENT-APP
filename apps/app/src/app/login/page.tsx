@@ -10,9 +10,7 @@ export default async function LoginPage() {
     redirect('/app');
   }
 
-  const isDevMode =
-    process.env.NODE_ENV === 'development' &&
-    process.env.AUTH_DEV_CREDENTIALS === 'true';
+  const isDevMode = process.env.AUTH_DEV_CREDENTIALS === 'true';
 
   const isSmtpConfigured = !!(
     process.env.SMTP_HOST &&
