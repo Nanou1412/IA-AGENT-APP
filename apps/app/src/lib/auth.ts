@@ -5,7 +5,6 @@ import EmailProvider from 'next-auth/providers/email';
 import { prisma } from '@/lib/prisma';
 
 const isDevCredentialsEnabled =
-  process.env.NODE_ENV === 'development' &&
   process.env.AUTH_DEV_CREDENTIALS === 'true';
 
 const isSmtpConfigured =

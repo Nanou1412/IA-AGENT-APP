@@ -1,6 +1,5 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse, NextRequest } from 'next/server';
-import { randomUUID } from 'crypto';
 
 const CORRELATION_ID_HEADER = 'x-correlation-id';
 
@@ -13,7 +12,7 @@ function addCorrelationId(request: NextRequest, response: NextResponse): NextRes
     ?? request.headers.get('x-request-id')
     ?? request.headers.get('x-vercel-id');
   
-  const correlationId = existingId ?? randomUUID();
+  const correlationId = existingId ?? crypto.randomUUID();
   
   // Add to response headers
   response.headers.set(CORRELATION_ID_HEADER, correlationId);
