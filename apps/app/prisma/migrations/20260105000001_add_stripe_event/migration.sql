@@ -1,5 +1,5 @@
--- CreateTable
-CREATE TABLE "StripeEvent" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "StripeEvent" (
     "id" TEXT NOT NULL,
     "stripeEventId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -12,17 +12,17 @@ CREATE TABLE "StripeEvent" (
     CONSTRAINT "StripeEvent_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "StripeEvent_stripeEventId_key" ON "StripeEvent"("stripeEventId");
+-- CreateIndex (idempotent)
+CREATE UNIQUE INDEX IF NOT EXISTS "StripeEvent_stripeEventId_key" ON "StripeEvent"("stripeEventId");
 
--- CreateIndex
-CREATE INDEX "StripeEvent_stripeEventId_idx" ON "StripeEvent"("stripeEventId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "StripeEvent_stripeEventId_idx" ON "StripeEvent"("stripeEventId");
 
--- CreateIndex
-CREATE INDEX "StripeEvent_orgId_idx" ON "StripeEvent"("orgId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "StripeEvent_orgId_idx" ON "StripeEvent"("orgId");
 
--- CreateIndex
-CREATE INDEX "StripeEvent_type_idx" ON "StripeEvent"("type");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "StripeEvent_type_idx" ON "StripeEvent"("type");
 
--- CreateIndex
-CREATE INDEX "StripeEvent_createdAt_idx" ON "StripeEvent"("createdAt");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "StripeEvent_createdAt_idx" ON "StripeEvent"("createdAt");

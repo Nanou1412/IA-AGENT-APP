@@ -1,15 +1,27 @@
 -- Phase 7.2: Takeaway Order Models
--- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('draft', 'pending_confirmation', 'confirmed', 'expired', 'canceled');
+-- CreateEnum (idempotent)
+DO $$ BEGIN
+    CREATE TYPE "OrderStatus" AS ENUM ('draft', 'pending_confirmation', 'confirmed', 'expired', 'canceled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- CreateEnum
-CREATE TYPE "OrderPickupMode" AS ENUM ('asap', 'scheduled');
+-- CreateEnum (idempotent)
+DO $$ BEGIN
+    CREATE TYPE "OrderPickupMode" AS ENUM ('asap', 'scheduled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- CreateEnum
-CREATE TYPE "OrderEventType" AS ENUM ('draft_created', 'draft_updated', 'confirmation_requested', 'confirmed', 'expired', 'canceled', 'handoff_triggered', 'notification_sent', 'notification_failed', 'error');
+-- CreateEnum (idempotent)
+DO $$ BEGIN
+    CREATE TYPE "OrderEventType" AS ENUM ('draft_created', 'draft_updated', 'confirmation_requested', 'confirmed', 'expired', 'canceled', 'handoff_triggered', 'notification_sent', 'notification_failed', 'error');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- CreateTable
-CREATE TABLE "Order" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "Order" (
     "id" TEXT NOT NULL,
     "orgId" TEXT NOT NULL,
     "sessionId" TEXT,
@@ -31,8 +43,8 @@ CREATE TABLE "Order" (
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "OrderItem" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "OrderItem" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -44,8 +56,8 @@ CREATE TABLE "OrderItem" (
     CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "OrderEventLog" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "OrderEventLog" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "type" "OrderEventType" NOT NULL,
@@ -55,44 +67,60 @@ CREATE TABLE "OrderEventLog" (
     CONSTRAINT "OrderEventLog_pkey" PRIMARY KEY ("id")
 );
 
--- Add takeawayConfig to OrgSettings
-ALTER TABLE "OrgSettings" ADD COLUMN "takeawayConfig" JSONB;
+-- Add takeawayConfig to OrgSettings (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "OrgSettings" ADD COLUMN "takeawayConfig" JSONB;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;
 
--- CreateIndex
-CREATE UNIQUE INDEX "Order_idempotencyKey_key" ON "Order"("idempotencyKey");
+-- CreateIndex (idempotent)
+CREATE UNIQUE INDEX IF NOT EXISTS "Order_idempotencyKey_key" ON "Order"("idempotencyKey");
 
--- CreateIndex
-CREATE INDEX "Order_orgId_idx" ON "Order"("orgId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "Order_orgId_idx" ON "Order"("orgId");
 
--- CreateIndex
-CREATE INDEX "Order_sessionId_idx" ON "Order"("sessionId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "Order_sessionId_idx" ON "Order"("sessionId");
 
--- CreateIndex
-CREATE INDEX "Order_status_idx" ON "Order"("status");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "Order_status_idx" ON "Order"("status");
 
--- CreateIndex
-CREATE INDEX "Order_customerPhone_idx" ON "Order"("customerPhone");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "Order_customerPhone_idx" ON "Order"("customerPhone");
 
--- CreateIndex
-CREATE INDEX "Order_createdAt_idx" ON "Order"("createdAt");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "Order_createdAt_idx" ON "Order"("createdAt");
 
--- CreateIndex
-CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem"("orderId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "OrderItem_orderId_idx" ON "OrderItem"("orderId");
 
--- CreateIndex
-CREATE INDEX "OrderEventLog_orderId_idx" ON "OrderEventLog"("orderId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "OrderEventLog_orderId_idx" ON "OrderEventLog"("orderId");
 
--- CreateIndex
-CREATE INDEX "OrderEventLog_type_idx" ON "OrderEventLog"("type");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "OrderEventLog_type_idx" ON "OrderEventLog"("type");
 
--- CreateIndex
-CREATE INDEX "OrderEventLog_createdAt_idx" ON "OrderEventLog"("createdAt");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "OrderEventLog_createdAt_idx" ON "OrderEventLog"("createdAt");
 
--- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Org"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "Order" ADD CONSTRAINT "Order_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Org"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "OrderEventLog" ADD CONSTRAINT "OrderEventLog_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "OrderEventLog" ADD CONSTRAINT "OrderEventLog_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
