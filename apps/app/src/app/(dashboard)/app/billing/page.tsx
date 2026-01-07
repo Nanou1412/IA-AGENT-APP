@@ -51,7 +51,7 @@ const BILLING_STATUS_CONFIG: Record<BillingStatus, {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; canceled?: string }>;
+  searchParams: Promise<{ success?: string; canceled?: string; stripeConnected?: string; stripeError?: string }>;
 }) {
   const { user, org } = await requireUserWithOrg();
   const params = await searchParams;
@@ -74,6 +74,9 @@ export default async function BillingPage({
   const sandboxStatus = settings?.sandboxStatus ?? SandboxStatus.sandbox_required;
   const statusConfig = BILLING_STATUS_CONFIG[billingStatus];
   
+  // Stripe Connect status
+  const isStripeConnected = !!org.stripeAccountId;
+  
   // Sandbox must be approved before billing makes sense
   const sandboxApproved = sandboxStatus === SandboxStatus.approved;
   
@@ -94,6 +97,32 @@ export default async function BillingPage({
               <div className="text-sm">
                 Votre abonnement est maintenant actif. Vous pouvez utiliser tous les modules en production.
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {params.stripeConnected === '1' && (
+        <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">✓</span>
+            <div>
+              <div className="font-semibold">Stripe connecté avec succès !</div>
+              <div className="text-sm">
+                Votre compte Stripe est maintenant connecté. Vous pouvez accepter les paiements.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {params.stripeError && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <div className="font-semibold">Erreur Stripe Connect</div>
+              <div className="text-sm">{params.stripeError}</div>
             </div>
           </div>
         </div>
@@ -179,6 +208,50 @@ export default async function BillingPage({
             )}
           </div>
         )}
+      </div>
+      
+      {/* Stripe Connect Card */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold mb-2">Compte Stripe Connect</h2>
+            {isStripeConnected ? (
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-3">
+                  <span>✓</span>
+                  <span>Connecté</span>
+                </div>
+                <p className="text-gray-600 mb-3">
+                  Votre compte Stripe est connecté. Les paiements seront traités via votre compte.
+                </p>
+                <div className="bg-gray-50 rounded border p-3">
+                  <div className="text-sm text-gray-500">Account ID</div>
+                  <div className="font-mono text-sm">{org.stripeAccountId}</div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 mb-3">
+                  <span>○</span>
+                  <span>Non connecté</span>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  Connectez votre compte Stripe pour accepter les paiements de vos clients.
+                  Les fonds iront directement sur votre compte Stripe.
+                </p>
+                {isOwner && (
+                  <a
+                    href={`/api/stripe/connect?orgId=${org.id}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                  >
+                    <span>🔗</span>
+                    <span>Connect Stripe</span>
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       
       {/* Actions */}
