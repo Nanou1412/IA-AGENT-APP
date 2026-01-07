@@ -284,6 +284,7 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
         industry: context.org.industry,
         timezone: 'Australia/Sydney',
         industryConfigId: context.org.industryConfig?.id || null,
+        stripeAccountId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
         industryConfig: context.org.industryConfig ? {
