@@ -8,6 +8,20 @@ import { MessagingChannel } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
+// Parse form body like voice webhook does
+async function parseFormBody(text: string): Promise<Record<string, string>> {
+  const params: Record<string, string> = {};
+  
+  for (const pair of text.split('&')) {
+    const [key, value] = pair.split('=');
+    if (key && value !== undefined) {
+      params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ' '));
+    }
+  }
+  
+  return params;
+}
+
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get('phone') || '+61468086457';
   
@@ -42,4 +56,35 @@ export async function GET(req: NextRequest) {
       error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
+}
+
+// POST - test exactly like voice webhook
+export async function POST(req: NextRequest) {
+  const text = await req.text();
+  const params = await parseFormBody(text);
+  
+  const To = params.To;
+  const normalized = To ? To.replace(/[^\d+]/g, '') : 'NO_TO';
+  
+  // Query exactly like resolveOrgFromVoiceNumber
+  const endpoint = await prisma.channelEndpoint.findFirst({
+    where: {
+      channel: MessagingChannel.voice,
+      twilioPhoneNumber: normalized,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      orgId: true,
+    },
+  });
+  
+  return NextResponse.json({
+    rawText: text,
+    parsedTo: To,
+    normalizedTo: normalized,
+    allParams: params,
+    endpointFound: !!endpoint,
+    endpoint,
+  });
 }
