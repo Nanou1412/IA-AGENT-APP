@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MessagingChannel } from '@prisma/client';
+import { resolveOrgFromVoiceNumber } from '@/lib/twilio-voice';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get('phone') || '+61468086457';
   
   try {
-    // Test 1: Direct query
+    // Test using the actual function from twilio-voice
+    const result = await resolveOrgFromVoiceNumber(phone);
+    
+    // Also direct query
     const endpoint = await prisma.channelEndpoint.findFirst({
       where: {
         channel: MessagingChannel.voice,
@@ -47,13 +51,14 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({
       searchedPhone: phone,
-      found: !!endpoint,
-      endpoint: endpoint ? { id: endpoint.id, orgId: endpoint.orgId } : null,
+      resolveOrgFromVoiceNumberResult: result,
+      directQueryResult: endpoint ? { id: endpoint.id, orgId: endpoint.orgId } : null,
       allEndpoints,
     });
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
     }, { status: 500 });
   }
 }
@@ -64,10 +69,13 @@ export async function POST(req: NextRequest) {
   const params = await parseFormBody(text);
   
   const To = params.To;
-  const normalized = To ? To.replace(/[^\d+]/g, '') : 'NO_TO';
   
-  // Query exactly like resolveOrgFromVoiceNumber
-  const endpoint = await prisma.channelEndpoint.findFirst({
+  // Use the actual function
+  const resolveResult = await resolveOrgFromVoiceNumber(To);
+  
+  // Also direct query
+  const normalized = To ? To.replace(/[^\d+]/g, '') : 'NO_TO';
+  const directEndpoint = await prisma.channelEndpoint.findFirst({
     where: {
       channel: MessagingChannel.voice,
       twilioPhoneNumber: normalized,
@@ -84,7 +92,7 @@ export async function POST(req: NextRequest) {
     parsedTo: To,
     normalizedTo: normalized,
     allParams: params,
-    endpointFound: !!endpoint,
-    endpoint,
+    resolveOrgFromVoiceNumberResult: resolveResult,
+    directQueryResult: directEndpoint,
   });
 }
