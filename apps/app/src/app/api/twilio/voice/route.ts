@@ -116,7 +116,9 @@ export async function POST(req: NextRequest) {
     }
     
     // Resolve org from To number
+    console.log(`[twilio-voice] Looking up endpoint for To=${To}`);
     const endpoint = await resolveOrgFromVoiceNumber(To);
+    console.log(`[twilio-voice] Lookup result:`, endpoint ? `orgId=${endpoint.orgId}` : 'NOT FOUND');
     
     if (!endpoint) {
       console.warn(`[twilio-voice] No endpoint found for: ${To}`);

@@ -448,6 +448,8 @@ export async function resolveOrgFromVoiceNumber(
   // Normalize: voice numbers don't have prefixes
   const normalized = twilioPhoneNumber.replace(/[^\d+]/g, '');
   
+  console.log(`[resolveOrgFromVoiceNumber] Input: "${twilioPhoneNumber}" -> Normalized: "${normalized}"`);
+  
   const endpoint = await prisma.channelEndpoint.findFirst({
     where: {
       channel: MessagingChannel.voice,
@@ -459,6 +461,8 @@ export async function resolveOrgFromVoiceNumber(
       orgId: true,
     },
   });
+
+  console.log(`[resolveOrgFromVoiceNumber] Query result:`, endpoint ? `id=${endpoint.id}` : 'null');
 
   if (!endpoint) {
     return null;
