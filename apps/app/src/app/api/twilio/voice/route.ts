@@ -43,7 +43,10 @@ import { increment, METRIC_NAMES, recordTwilioVoice } from '@/lib/metrics';
 export const dynamic = 'force-dynamic';
 
 // App URL for constructing webhook URLs
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+// Priority: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL 
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+  || 'http://localhost:3001';
 
 /**
  * Parse form-urlencoded body
