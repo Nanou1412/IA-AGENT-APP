@@ -99,7 +99,10 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
     
-    if (process.env.NODE_ENV === 'production') {
+    // TEMPORARY: Skip signature validation to debug - set SKIP_TWILIO_SIGNATURE=1 in Vercel
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
+    
+    if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice] Invalid signature for URL:', webhookUrl);
         console.error('[twilio-voice] Signature received:', signature ? 'present' : 'MISSING');
@@ -112,6 +115,8 @@ export async function POST(req: NextRequest) {
         // Return empty response - don't give info to potential attacker
         return twimlResponse(generateUnmappedCallTwiML());
       }
+    } else if (skipSignature) {
+      console.warn('[twilio-voice] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
     } else if (!signature) {
       console.warn('[twilio-voice] No signature in dev mode - skipping validation');
     }
