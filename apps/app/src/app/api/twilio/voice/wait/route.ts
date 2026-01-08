@@ -40,7 +40,7 @@ async function parseFormBody(req: NextRequest): Promise<Record<string, string>> 
 function twimlResponse(twiml: string): NextResponse {
   return new NextResponse(twiml, {
     status: 200,
-    headers: { 'Content-Type': 'text/xml' },
+    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
   });
 }
 
@@ -61,12 +61,17 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
     
-    if (process.env.NODE_ENV === 'production') {
+    // TEMPORARY: Skip signature validation to debug - set SKIP_TWILIO_SIGNATURE=1 in Vercel
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
+    
+    if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice-wait] Invalid signature for URL:', webhookUrl);
         // Return default wait message anyway - don't break the call
         return twimlResponse(generateQueueWaitTwiML(DEFAULT_CALL_QUEUE_WAIT_TEXT, 10));
       }
+    } else if (skipSignature) {
+      console.warn('[twilio-voice-wait] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
     }
     
     // Get org-specific wait text if orgId available

@@ -85,11 +85,16 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
     
-    if (process.env.NODE_ENV === 'production') {
+    // TEMPORARY: Skip signature validation to debug - set SKIP_TWILIO_SIGNATURE=1 in Vercel
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
+    
+    if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice-input] Invalid signature');
         return twimlResponse(sayAndHangup(DEFAULT_CALL_DENY_TEXT));
       }
+    } else if (skipSignature) {
+      console.warn('[twilio-voice-input] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
     }
     
     // Log input received
