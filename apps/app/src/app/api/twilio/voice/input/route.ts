@@ -26,10 +26,9 @@ import { logTwilioAudit } from '@/lib/twilio-helpers';
 export const dynamic = 'force-dynamic';
 
 // App URL for constructing webhook URLs
-// Priority: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
+// IMPORTANT: Must be the production URL, not preview URLs
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL 
-  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-  || 'http://localhost:3001';
+  || 'https://ia-agent-app-app.vercel.app';
 
 /**
  * Parse form-urlencoded body
