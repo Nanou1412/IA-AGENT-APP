@@ -246,17 +246,15 @@ export async function POST(req: NextRequest) {
       processingTimeMs: Date.now() - startTime,
     }, { orgId });
     
-    // PHASE 1: Use Gather menu for stable call flow
-    // This replaces the problematic <Enqueue> which waited for human agents
-    const inputUrl = `${APP_URL}/api/twilio/voice/input?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(CallSid)}`;
-    const menuText = "Press 1 for orders. Press 2 for information. Press 3 to speak with our team.";
+    // PHASE 1: Use Gather menu to keep call alive
+    // Replaces <Enqueue> which waited for human agents indefinitely
+    const inputActionUrl = `${APP_URL}/api/twilio/voice/input?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(CallSid)}`;
     
     return twimlResponse(
       generateGatherMenuTwiML(
         welcomeText || DEFAULT_CALL_WELCOME_TEXT,
-        menuText,
-        inputUrl,
-        { timeout: 5, numDigits: 1 }
+        inputActionUrl,
+        { voice: 'Polly.Olivia', language: 'en-AU' }
       )
     );
     
