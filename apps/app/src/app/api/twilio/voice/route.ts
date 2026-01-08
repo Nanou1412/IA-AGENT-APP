@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV === 'production') {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice] Invalid signature for URL:', webhookUrl);
+        console.error('[twilio-voice] Signature received:', signature ? 'present' : 'MISSING');
         await logTwilioAudit('twilio.voice.invalid_signature', {
           callSid: CallSid,
           from: From,
