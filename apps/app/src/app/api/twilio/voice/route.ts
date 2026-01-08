@@ -68,7 +68,7 @@ async function parseFormBody(req: NextRequest): Promise<Record<string, string>> 
 function twimlResponse(twiml: string): NextResponse {
   return new NextResponse(twiml, {
     status: 200,
-    headers: { 'Content-Type': 'text/xml' },
+    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
   });
 }
 
