@@ -434,37 +434,42 @@ model BookingRequestLog {
 }
 
 model Order {
-  id                  String             @id @default(cuid())
-  orgId               String
-  sessionId           String?
-  channel             String
-  status              OrderStatus        @default(draft)
-  customerName        String?
-  customerPhone       String
-  customerEmail       String?
-  pickupTime          DateTime?
-  pickupMode          String?
-  notes               String?
-  totalItems          Int                @default(0)
-  summaryText         String
-  idempotencyKey      String             @unique
-  paymentRequired     Boolean            @default(true)
-  paymentStatus       OrderPaymentStatus @default(pending)
-  paymentAmountCents  Int?
-  paymentCurrency     String             @default("AUD")
-  paymentDueAt        DateTime?
-  paymentPaidAt       DateTime?
-  paymentReceiptEmail String?
-  paymentAttemptCount Int                @default(0)
-  lastPaymentError    String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  confirmedAt         DateTime?
-  expiredAt           DateTime?
-  Org                 Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  eventLogs           OrderEventLog[]
-  items               OrderItem[]
-  paymentLinks        OrderPaymentLink[]
+  id                      String             @id @default(cuid())
+  orgId                   String
+  sessionId               String?
+  channel                 String
+  status                  OrderStatus        @default(draft)
+  customerName            String?
+  customerPhone           String
+  customerEmail           String?
+  pickupTime              DateTime?
+  pickupMode              String?
+  notes                   String?
+  totalItems              Int                @default(0)
+  summaryText             String
+  idempotencyKey          String             @unique
+  paymentRequired         Boolean            @default(true)
+  paymentStatus           OrderPaymentStatus @default(pending)
+  paymentAmountCents      Int?
+  paymentCurrency         String             @default("AUD")
+  paymentDueAt            DateTime?
+  paymentPaidAt           DateTime?
+  paymentReceiptEmail     String?
+  paymentAttemptCount     Int                @default(0)
+  lastPaymentError        String?
+  // Stripe Checkout Session fields
+  stripeCheckoutSessionId String?            @unique
+  stripePaymentIntentId   String?
+  amountTotalCents        Int?
+  paidAt                  DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  confirmedAt             DateTime?
+  expiredAt               DateTime?
+  Org                     Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventLogs               OrderEventLog[]
+  items                   OrderItem[]
+  paymentLinks            OrderPaymentLink[]
 
   @@index([orgId])
   @@index([sessionId])
@@ -491,6 +496,15 @@ model OrderPaymentLink {
   @@index([orderId])
   @@index([status])
   @@index([expiresAt])
+}
+
+model StripeWebhookEvent {
+  id        String   @id // Stripe event ID
+  type      String   // e.g., checkout.session.completed
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
 }
 
 model OrderItem {
