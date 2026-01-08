@@ -23,9 +23,9 @@ import {
   DEFAULT_NO_HANDOFF_TEXT,
   generateDeniedCallTwiML,
   generateUnmappedCallTwiML,
-  generateWelcomeWithQueueTwiML,
   generateWelcomeWithDialTwiML,
   generateNoHandoffTwiML,
+  generateGatherMenuTwiML,
   createCallLog,
   updateCallLogDenied,
   resolveOrgFromVoiceNumber,
@@ -246,43 +246,17 @@ export async function POST(req: NextRequest) {
       processingTimeMs: Date.now() - startTime,
     }, { orgId });
     
-    // Option 1: Queue enabled - use Enqueue with wait URL
-    if (voiceConfig.callQueueEnabled) {
-      const waitUrl = `${APP_URL}/api/twilio/voice/wait?orgId=${encodeURIComponent(orgId)}`;
-      
-      return twimlResponse(
-        generateWelcomeWithQueueTwiML(
-          orgId,
-          welcomeText || DEFAULT_CALL_WELCOME_TEXT,
-          waitUrl
-        )
-      );
-    }
+    // PHASE 1: Use Gather menu for stable call flow
+    // This replaces the problematic <Enqueue> which waited for human agents
+    const inputUrl = `${APP_URL}/api/twilio/voice/input?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(CallSid)}`;
+    const menuText = "Press 1 for orders. Press 2 for information. Press 3 to speak with our team.";
     
-    // Option 2: Direct dial to handoff number
-    if (voiceConfig.callHandoffNumber) {
-      const recordingStatusCallback = voiceConfig.recordCalls
-        ? `${APP_URL}/api/twilio/voice/recording?orgId=${encodeURIComponent(orgId)}`
-        : undefined;
-      
-      return twimlResponse(
-        generateWelcomeWithDialTwiML(
-          welcomeText || DEFAULT_CALL_WELCOME_TEXT,
-          voiceConfig.callHandoffNumber,
-          {
-            record: voiceConfig.recordCalls,
-            recordingStatusCallback,
-            callerId: To, // Use our number as caller ID
-          }
-        )
-      );
-    }
-    
-    // Option 3: No queue, no handoff - leave a callback message
     return twimlResponse(
-      generateNoHandoffTwiML(
+      generateGatherMenuTwiML(
         welcomeText || DEFAULT_CALL_WELCOME_TEXT,
-        DEFAULT_NO_HANDOFF_TEXT
+        menuText,
+        inputUrl,
+        { timeout: 5, numDigits: 1 }
       )
     );
     

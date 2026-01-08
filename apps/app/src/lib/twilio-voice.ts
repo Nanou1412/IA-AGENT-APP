@@ -299,6 +299,39 @@ export function generateQueueWaitTwiML(waitText: string, pauseSeconds: number = 
   );
 }
 
+/**
+ * Generate TwiML for DTMF menu (Gather with numDigits)
+ * Used for stable call flow - waits for user input
+ */
+export function generateGatherMenuTwiML(
+  welcomeText: string,
+  menuText: string,
+  actionUrl: string,
+  options?: { timeout?: number; numDigits?: number }
+): string {
+  const timeout = options?.timeout ?? 5;
+  const numDigits = options?.numDigits ?? 1;
+  
+  return generateVoiceTwiML(
+    sayTwiML(welcomeText) +
+    `<Gather numDigits="${numDigits}" action="${escapeXml(actionUrl)}" timeout="${timeout}">` +
+    sayTwiML(menuText) +
+    `</Gather>` +
+    sayTwiML("We didn't receive any input. Goodbye.") +
+    hangupTwiML()
+  );
+}
+
+/**
+ * Generate TwiML for simple response + hangup
+ */
+export function generateSayAndHangupTwiML(message: string): string {
+  return generateVoiceTwiML(
+    sayTwiML(message) +
+    hangupTwiML()
+  );
+}
+
 // ============================================================================
 // Call Log Helpers
 // ============================================================================
