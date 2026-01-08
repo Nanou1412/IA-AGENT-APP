@@ -1,11 +1,11 @@
 /**
- * TEMPORARY - Test endpoint lookup
+ * TEMPORARY - Test endpoint lookup and signature debugging
  * DELETE AFTER DEBUGGING
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MessagingChannel } from '@prisma/client';
-import { resolveOrgFromVoiceNumber } from '@/lib/twilio-voice';
+import { resolveOrgFromVoiceNumber, getPublicRequestUrl, validateTwilioSignature } from '@/lib/twilio-voice';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,12 +63,24 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - test exactly like voice webhook
+// POST - test exactly like voice webhook + signature debug
 export async function POST(req: NextRequest) {
   const text = await req.text();
   const params = await parseFormBody(text);
   
   const To = params.To;
+  
+  // Get signature info
+  const signature = req.headers.get('x-twilio-signature') || '';
+  const webhookUrl = getPublicRequestUrl(req);
+  
+  // Test signature validation
+  let signatureValid = false;
+  try {
+    signatureValid = validateTwilioSignature(signature, webhookUrl, params);
+  } catch (e) {
+    // ignore
+  }
   
   // Use the actual function
   const resolveResult = await resolveOrgFromVoiceNumber(To);
@@ -87,7 +99,22 @@ export async function POST(req: NextRequest) {
     },
   });
   
+  // Get all headers for debug
+  const headers: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  
   return NextResponse.json({
+    signatureDebug: {
+      signaturePresent: !!signature,
+      signatureLength: signature.length,
+      webhookUrl,
+      signatureValid,
+      authTokenConfigured: !!process.env.TWILIO_AUTH_TOKEN,
+      authTokenLength: process.env.TWILIO_AUTH_TOKEN?.length || 0,
+    },
+    headers,
     rawText: text,
     parsedTo: To,
     normalizedTo: normalized,

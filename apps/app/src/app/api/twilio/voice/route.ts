@@ -105,6 +105,17 @@ export async function POST(req: NextRequest) {
     // TEMPORARY: Skip signature validation to debug - set SKIP_TWILIO_SIGNATURE=1 in Vercel
     const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
     
+    // DEBUG: Log signature validation details
+    console.log('[twilio-voice] DEBUG Signature validation:', {
+      webhookUrl,
+      signaturePresent: !!signature,
+      signatureLength: signature?.length || 0,
+      skipSignature,
+      nodeEnv: process.env.NODE_ENV,
+      authTokenConfigured: !!process.env.TWILIO_AUTH_TOKEN,
+      authTokenLength: process.env.TWILIO_AUTH_TOKEN?.length || 0,
+    });
+    
     if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice] Invalid signature for URL:', webhookUrl);
