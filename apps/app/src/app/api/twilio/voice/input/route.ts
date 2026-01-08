@@ -13,7 +13,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getPublicRequestUrl,
   validateTwilioSignature,
-  generateSayAndHangupTwiML,
+  generateVoiceTwiML,
+  sayTwiML,
+  hangupTwiML,
   generateGatherMenuTwiML,
   generateWelcomeWithDialTwiML,
   getVoiceConfig,
@@ -52,6 +54,15 @@ function twimlResponse(twiml: string): NextResponse {
   });
 }
 
+/**
+ * Generate TwiML: Say message then Hangup
+ */
+function sayAndHangup(message: string): string {
+  return generateVoiceTwiML(
+    sayTwiML(message, { voice: 'Polly.Olivia', language: 'en-AU' }) + hangupTwiML()
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Parse form body
@@ -73,7 +84,7 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV === 'production') {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice-input] Invalid signature');
-        return twimlResponse(generateSayAndHangupTwiML(DEFAULT_CALL_DENY_TEXT));
+        return twimlResponse(sayAndHangup(DEFAULT_CALL_DENY_TEXT));
       }
     }
     
@@ -91,7 +102,7 @@ export async function POST(req: NextRequest) {
       case '1':
         // Orders - placeholder for Phase 2/3
         return twimlResponse(
-          generateSayAndHangupTwiML(
+          sayAndHangup(
             "Thank you for your interest in placing an order. " +
             "Our ordering system will be available soon. " +
             "Please call back later or visit our website. Goodbye."
@@ -101,7 +112,7 @@ export async function POST(req: NextRequest) {
       case '2':
         // Information - placeholder for Phase 2/3
         return twimlResponse(
-          generateSayAndHangupTwiML(
+          sayAndHangup(
             "We are open Monday to Saturday from 11 AM to 10 PM. " +
             "For more information, please visit our website. " +
             "Thank you for calling. Goodbye."
@@ -126,7 +137,7 @@ export async function POST(req: NextRequest) {
         
         // No handoff number configured
         return twimlResponse(
-          generateSayAndHangupTwiML(
+          sayAndHangup(
             "We're sorry, our team is not available right now. " +
             "Please try again during business hours. Goodbye."
           )
@@ -139,9 +150,7 @@ export async function POST(req: NextRequest) {
         return twimlResponse(
           generateGatherMenuTwiML(
             "Sorry, I didn't understand that.",
-            "Press 1 for orders. Press 2 for information. Press 3 to speak with our team.",
-            inputUrl,
-            { timeout: 5, numDigits: 1 }
+            inputUrl
           )
         );
     }
@@ -151,7 +160,7 @@ export async function POST(req: NextRequest) {
     
     // Always return valid TwiML
     return twimlResponse(
-      generateSayAndHangupTwiML(
+      sayAndHangup(
         "We're sorry, an error occurred. Please try again later. Goodbye."
       )
     );
