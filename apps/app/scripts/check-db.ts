@@ -5,7 +5,7 @@ import { PrismaClient, SandboxStatus, BillingStatus, MembershipRole, MessagingCh
 
 const prisma = new PrismaClient();
 
-const TWILIO_PHONE = '+61468086457';
+const TWILIO_PHONE = '+61485000807';
 
 async function main() {
   console.log('=== CHECKING DATABASE STATE ===\n');
