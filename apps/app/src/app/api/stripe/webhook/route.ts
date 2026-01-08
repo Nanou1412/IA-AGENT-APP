@@ -88,11 +88,22 @@ export async function POST(req: NextRequest) {
     const orgId = resolvedOrg?.orgId ?? null;
     
     // Check idempotency - has this event been processed before?
-    const idempotencyResult = await checkAndRecordEvent(event, orgId);
-    
-    if (idempotencyResult.alreadyProcessed) {
-      console.log(`[stripe-webhook] Event ${event.id} already processed, skipping`);
-      return NextResponse.json({ received: true, skipped: true });
+    // Create the event record FIRST to ensure idempotence even on retries
+    try {
+      await prisma.stripeWebhookEvent.create({
+        data: {
+          id: event.id,
+          type: event.type,
+        },
+      });
+    } catch (err) {
+      // If unique constraint violation, event was already processed
+      if ((err as any).code === 'P2002') {
+        console.log(`[stripe-webhook] Event ${event.id} already processed, skipping`);
+        return NextResponse.json({ received: true, skipped: true });
+      }
+      // Other DB errors should be re-thrown
+      throw err;
     }
     
     // Handle unmapped events (org not found)
@@ -121,9 +132,8 @@ export async function POST(req: NextRequest) {
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
-          // Route based on domain metadata
-          if (session.metadata?.domain === 'order') {
-            // Order payment - orgId from metadata
+          // Gate: only process as order if orderId exists in metadata
+          if (session.metadata?.orderId) {
             const orderOrgId = session.metadata?.orgId;
             if (orderOrgId) {
               await handleOrderCheckoutCompleted(session, orderOrgId, event.id);
@@ -131,7 +141,7 @@ export async function POST(req: NextRequest) {
               console.error('[stripe-webhook] Order checkout missing orgId in metadata');
             }
           } else {
-            // Default: subscription billing checkout
+            // Default: subscription billing checkout (no orderId)
             await handleCheckoutCompleted(session, resolvedOrg.orgId, event.id);
           }
           break;
@@ -139,8 +149,8 @@ export async function POST(req: NextRequest) {
 
         case 'checkout.session.expired': {
           const session = event.data.object as Stripe.Checkout.Session;
-          // Only handle order checkouts
-          if (session.metadata?.domain === 'order') {
+          // Gate: only process as order if orderId exists in metadata
+          if (session.metadata?.orderId) {
             const orderOrgId = session.metadata?.orgId;
             if (orderOrgId) {
               await handleOrderCheckoutExpired(session, orderOrgId, event.id);
@@ -188,8 +198,7 @@ export async function POST(req: NextRequest) {
           console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
       }
       
-      // Mark event as successfully processed
-      await markEventProcessed(event.id);
+      // Event already marked as processed at the beginning (idempotence)
       
     } catch (handlerError) {
       console.error(`[stripe-webhook] Error handling ${event.type}:`, handlerError);
