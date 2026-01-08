@@ -277,7 +277,7 @@ export async function POST(req: NextRequest) {
       generateGatherMenuTwiML(
         welcomeText || DEFAULT_CALL_WELCOME_TEXT,
         inputActionUrl,
-        { voice: 'Polly.Olivia', language: 'en-AU' }
+        { voice: 'alice', language: 'en-AU' }
       )
     );
     

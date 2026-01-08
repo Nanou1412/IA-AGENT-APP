@@ -148,9 +148,10 @@ export function generateVoiceTwiML(content: string): string {
 
 /**
  * Generate TwiML to say a message
+ * Note: Using 'alice' voice (Twilio standard) instead of Polly.Olivia which requires AWS Polly integration
  */
 export function sayTwiML(message: string, options?: { voice?: string; language?: string }): string {
-  const voice = options?.voice || 'Polly.Olivia'; // Australian English voice
+  const voice = options?.voice || 'alice'; // Twilio standard voice (en-AU compatible)
   const language = options?.language || 'en-AU';
   const safeMessage = safeTextToSay(message);
   return `<Say voice="${voice}" language="${language}">${safeMessage}</Say>`;
@@ -308,7 +309,7 @@ export function generateGatherMenuTwiML(
   inputActionUrl: string,
   options?: { voice?: string; language?: string }
 ): string {
-  const voice = options?.voice || 'Polly.Olivia';
+  const voice = options?.voice || 'alice';
   const language = options?.language || 'en-AU';
   const menuText = 'Press 1 for orders. Press 2 for information. Press 3 to speak with our team.';
   

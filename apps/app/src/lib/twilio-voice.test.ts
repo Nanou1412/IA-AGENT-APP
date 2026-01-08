@@ -89,9 +89,9 @@ describe('generateVoiceTwiML', () => {
 });
 
 describe('sayTwiML', () => {
-  it('generates Say with default Australian voice', () => {
+  it('generates Say with default alice voice', () => {
     const result = sayTwiML('Hello world');
-    expect(result).toContain('<Say voice="Polly.Olivia" language="en-AU">Hello world</Say>');
+    expect(result).toContain('<Say voice="alice" language="en-AU">Hello world</Say>');
   });
 
   it('escapes message content', () => {

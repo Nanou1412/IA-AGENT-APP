@@ -62,7 +62,7 @@ function twimlResponse(twiml: string): NextResponse {
  */
 function sayAndHangup(message: string): string {
   return generateVoiceTwiML(
-    sayTwiML(message, { voice: 'Polly.Olivia', language: 'en-AU' }) + hangupTwiML()
+    sayTwiML(message, { voice: 'alice', language: 'en-AU' }) + hangupTwiML()
   );
 }
 
