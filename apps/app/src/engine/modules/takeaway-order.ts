@@ -640,30 +640,47 @@ async function handlePaymentRequired(
   // Transition to pending_payment status
   await setOrderPendingPayment(orderId, amountCents, paymentConfig.currency);
 
-  // Create Stripe Checkout session
-  const checkoutResult = await createOrderCheckoutSession({
-    orderId,
-    orgId,
-    amountCents,
-    currency: paymentConfig.currency,
-    customerPhone: existingOrder.customerPhone,
-    customerEmail: existingOrder.customerEmail || undefined,
-    sessionId,
-    channel,
-    productName: paymentConfig.productName,
-    orderSummary: `Order #${shortId}`,
-    config: paymentConfig,
-  });
+  let paymentUrl: string;
+  let expiresAt: Date | undefined;
 
-  if (!checkoutResult.success || !checkoutResult.paymentUrl) {
-    console.error(`[takeaway-order] Failed to create checkout session for order ${orderId}:`, checkoutResult.error);
+  // TEST MODE: Generate fake payment link without calling Stripe
+  if (paymentConfig.testMode) {
+    console.log(`[takeaway-order] TEST MODE: Generating fake payment link for order ${orderId}`);
+    const baseUrl = process.env.APP_URL || 'https://your-app.vercel.app';
+    paymentUrl = `${baseUrl}/test-payment?order=${shortId}&amount=${amountCents}`;
+    expiresAt = new Date(Date.now() + paymentConfig.expiresMinutes * 60 * 1000);
     
-    // Fallback to handoff
-    return {
-      responseText: "I'm having trouble setting up payment. Let me connect you with someone who can help.",
-      handoffTriggered: true,
-      handoffReason: `Payment setup failed: ${checkoutResult.error}`,
-    };
+    // Auto-confirm order in test mode after a delay (simulating payment)
+    // For now, just set to pending - user can manually trigger confirmation
+  } else {
+    // PRODUCTION: Create real Stripe Checkout session
+    const checkoutResult = await createOrderCheckoutSession({
+      orderId,
+      orgId,
+      amountCents,
+      currency: paymentConfig.currency,
+      customerPhone: existingOrder.customerPhone,
+      customerEmail: existingOrder.customerEmail || undefined,
+      sessionId,
+      channel,
+      productName: paymentConfig.productName,
+      orderSummary: `Order #${shortId}`,
+      config: paymentConfig,
+    });
+
+    if (!checkoutResult.success || !checkoutResult.paymentUrl) {
+      console.error(`[takeaway-order] Failed to create checkout session for order ${orderId}:`, checkoutResult.error);
+      
+      // Fallback to handoff
+      return {
+        responseText: "I'm having trouble setting up payment. Let me connect you with someone who can help.",
+        handoffTriggered: true,
+        handoffReason: `Payment setup failed: ${checkoutResult.error}`,
+      };
+    }
+
+    paymentUrl = checkoutResult.paymentUrl;
+    expiresAt = checkoutResult.expiresAt;
   }
 
   // Create audit log
@@ -677,7 +694,8 @@ async function handlePaymentRequired(
         channel,
         amountCents,
         currency: paymentConfig.currency,
-        expiresAt: checkoutResult.expiresAt?.toISOString(),
+        testMode: paymentConfig.testMode,
+        expiresAt: expiresAt?.toISOString(),
       },
     },
   });
@@ -689,7 +707,7 @@ async function handlePaymentRequired(
     customerPhone: existingOrder.customerPhone,
     orderId,
     shortOrderId: shortId,
-    paymentUrl: checkoutResult.paymentUrl,
+    paymentUrl: paymentUrl,
     expiresMinutes: paymentConfig.expiresMinutes,
   });
 
@@ -711,7 +729,7 @@ async function handlePaymentRequired(
   // Build payment message
   const paymentMessage = renderPaymentMessage(paymentConfig.messages.pending, {
     orderId: shortId,
-    paymentUrl: checkoutResult.paymentUrl,
+    paymentUrl: paymentUrl,
     expiresMinutes: paymentConfig.expiresMinutes,
   });
 

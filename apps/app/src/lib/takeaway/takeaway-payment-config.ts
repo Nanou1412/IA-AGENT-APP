@@ -34,6 +34,8 @@ export interface PaymentMessagesConfig {
 export interface TakeawayPaymentConfig {
   /** Whether payment is enabled for this org */
   enabled: boolean;
+  /** Test mode - sends fake payment links without Stripe */
+  testMode: boolean;
   /** Whether payment is required by default for orders */
   requiredByDefault: boolean;
   /** Minutes until payment link expires */
@@ -82,6 +84,7 @@ export const DEFAULT_PAYMENT_RETRY_CONFIG: PaymentRetryConfig = {
 
 export const DEFAULT_TAKEAWAY_PAYMENT_CONFIG: TakeawayPaymentConfig = {
   enabled: true,
+  testMode: false,
   requiredByDefault: true,
   expiresMinutes: 10,
   allowDisable: true,
@@ -109,6 +112,7 @@ export function parseTakeawayPaymentConfig(configJson: unknown): TakeawayPayment
 
   return {
     enabled: typeof config.enabled === 'boolean' ? config.enabled : true,
+    testMode: typeof config.testMode === 'boolean' ? config.testMode : false,
     requiredByDefault: typeof config.requiredByDefault === 'boolean' 
       ? config.requiredByDefault 
       : true,
