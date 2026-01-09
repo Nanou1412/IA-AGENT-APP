@@ -4,6 +4,8 @@
  * Redirects to Stripe OAuth authorization
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { validateStripeConnectConfig, signState } from '@/lib/stripe-connect';
 

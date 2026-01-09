@@ -4,6 +4,8 @@
  * Exchanges code for account ID and updates org
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyState, exchangeCodeForAccount } from '@/lib/stripe-connect';
 import { prisma } from '@/lib/prisma';
