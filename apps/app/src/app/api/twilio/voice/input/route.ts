@@ -1,10 +1,10 @@
 /**
- * Twilio Voice Input Handler (Phase 1)
+ * Twilio Voice Input Handler (Phase 2 - AI Enabled)
  * 
  * Handles DTMF input from Gather.
  * Routes based on digit pressed:
- * - 1: Orders (placeholder message)
- * - 2: Information (placeholder message)
+ * - 1: Orders - Start AI conversation for ordering
+ * - 2: Information - Start AI conversation for inquiries
  * - 3: Connect to team (dial handoff number)
  * - Other: Invalid input, retry
  */
@@ -29,6 +29,16 @@ export const dynamic = 'force-dynamic';
 // IMPORTANT: Must be the production URL, not preview URLs
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL 
   || 'https://ia-agent-app-app.vercel.app';
+
+// Default language (can be overridden per-org later)
+const DEFAULT_LOCALE = 'en-AU';
+
+// Language config for TTS/STT
+const LANGUAGE_CONFIG: Record<string, { sttLanguage: string; ttsVoice: string; ttsLanguage: string }> = {
+  'en-AU': { sttLanguage: 'en-AU', ttsVoice: 'alice', ttsLanguage: 'en-AU' },
+  'en-US': { sttLanguage: 'en-US', ttsVoice: 'alice', ttsLanguage: 'en-US' },
+  'fr-FR': { sttLanguage: 'fr-FR', ttsVoice: 'alice', ttsLanguage: 'fr-FR' },
+};
 
 /**
  * Parse form-urlencoded body
@@ -102,22 +112,26 @@ export async function POST(req: NextRequest) {
     // Route based on digit
     switch (digits) {
       case '1':
-        // Orders - placeholder for Phase 2/3
+        // Orders - Start AI conversation
         return twimlResponse(
-          sayAndHangup(
-            "Thank you for your interest in placing an order. " +
-            "Our ordering system will be available soon. " +
-            "Please call back later or visit our website. Goodbye."
+          startAIConversation(
+            "Great! I can help you with your order. What would you like to order today?",
+            orgId || '',
+            callSid || '',
+            params.From || '',
+            DEFAULT_LOCALE
           )
         );
       
       case '2':
-        // Information - placeholder for Phase 2/3
+        // Information - Start AI conversation
         return twimlResponse(
-          sayAndHangup(
-            "We are open Monday to Saturday from 11 AM to 10 PM. " +
-            "For more information, please visit our website. " +
-            "Thank you for calling. Goodbye."
+          startAIConversation(
+            "I'd be happy to help with information. What would you like to know?",
+            orgId || '',
+            callSid || '',
+            params.From || '',
+            DEFAULT_LOCALE
           )
         );
       
@@ -167,4 +181,40 @@ export async function POST(req: NextRequest) {
       )
     );
   }
+}
+
+/**
+ * Generate TwiML to start AI conversation
+ * Says intro message, then gathers speech input for AI processing
+ */
+function startAIConversation(
+  introMessage: string,
+  orgId: string,
+  callSid: string,
+  from: string,
+  locale: string
+): string {
+  const langConfig = LANGUAGE_CONFIG[locale] || LANGUAGE_CONFIG['en-AU'];
+  const { sttLanguage, ttsVoice, ttsLanguage } = langConfig;
+  
+  // Build conversation URL
+  const conversationParams = new URLSearchParams();
+  conversationParams.set('orgId', orgId);
+  if (callSid) conversationParams.set('callSid', callSid);
+  if (from) conversationParams.set('from', from);
+  conversationParams.set('locale', locale);
+  
+  const conversationUrl = `${APP_URL}/api/twilio/voice/conversation?${conversationParams.toString()}`
+    .replace(/&/g, '&amp;');
+  
+  const content = `
+    ${sayTwiML(introMessage, { voice: ttsVoice, language: ttsLanguage })}
+    <Gather input="speech" timeout="5" speechTimeout="auto" language="${sttLanguage}" action="${conversationUrl}" method="POST">
+      <Say voice="${ttsVoice}" language="${ttsLanguage}">.</Say>
+    </Gather>
+    ${sayTwiML("I didn't hear anything. If you need help, please call back. Goodbye.", { voice: ttsVoice, language: ttsLanguage })}
+    ${hangupTwiML()}
+  `.trim();
+  
+  return generateVoiceTwiML(content);
 }
