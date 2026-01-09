@@ -331,6 +331,14 @@ import('./modules/takeaway-order').then(({ takeawayOrderModule }) => {
   console.warn('[module-runner] Failed to load takeaway-order module:', err);
 });
 
+// Register conversational takeaway module (Phase 8 - Conversational AI)
+// Uses LLM function calling for natural conversation with strict menu rules
+import('./modules/takeaway-conversational').then(({ takeawayConversationalModule }) => {
+  registerModule('takeaway-conversational', takeawayConversationalModule);
+}).catch(err => {
+  console.warn('[module-runner] Failed to load takeaway-conversational module:', err);
+});
+
 // ============================================================================
 // Module Runner
 // ============================================================================

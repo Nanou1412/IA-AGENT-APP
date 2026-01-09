@@ -13,6 +13,9 @@ import type {
   IntentClassificationResult,
   ResponseGenerationResult,
   LLMMessage,
+  LLMFunctionDef,
+  LLMFunctionCall,
+  ChatCompletionWithFunctionsResult,
 } from '@repo/core';
 
 // ============================================================================
@@ -47,7 +50,15 @@ interface OpenAIResponse {
   id: string;
   choices: Array<{
     message: {
-      content: string;
+      content: string | null;
+      tool_calls?: Array<{
+        id: string;
+        type: 'function';
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }>;
     };
     finish_reason: string;
   }>;
@@ -155,6 +166,97 @@ export class OpenAIProvider implements LLMProvider {
       modelUsed: response.model || this.defaultModel,
       finishReason: response.choices[0]?.finish_reason,
     };
+  }
+
+  /**
+   * Chat completion with function calling (tools) support
+   * Used for conversational modules where the AI can call functions
+   */
+  async chatCompletionWithFunctions(
+    messages: LLMMessage[],
+    functions: LLMFunctionDef[],
+    options?: { temperature?: number; maxTokens?: number }
+  ): Promise<ChatCompletionWithFunctionsResult> {
+    const { temperature = 0.7, maxTokens = ENGINE_CONFIG.maxOutputTokens } = options || {};
+
+    // Convert to OpenAI format
+    const openaiMessages = this.convertMessages(messages);
+
+    // Convert functions to OpenAI tools format
+    const tools = functions.map(fn => ({
+      type: 'function' as const,
+      function: {
+        name: fn.name,
+        description: fn.description,
+        parameters: fn.parameters,
+      },
+    }));
+
+    const body: Record<string, unknown> = {
+      model: this.defaultModel,
+      messages: openaiMessages,
+      temperature,
+      max_tokens: maxTokens,
+      tools,
+      tool_choice: 'auto',
+    };
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+        const response = await fetch(OPENAI_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`OpenAI API error ${response.status}: ${errorBody}`);
+        }
+
+        const data = await response.json() as OpenAIResponse;
+        const choice = data.choices[0];
+        const message = choice?.message;
+
+        // Parse function calls if present
+        let functionCalls: LLMFunctionCall[] | null = null;
+        if (message?.tool_calls && message.tool_calls.length > 0) {
+          functionCalls = message.tool_calls.map(tc => ({
+            name: tc.function.name,
+            arguments: JSON.parse(tc.function.arguments),
+          }));
+        }
+
+        return {
+          content: message?.content || null,
+          functionCalls,
+          inputTokens: data.usage?.prompt_tokens || 0,
+          outputTokens: data.usage?.completion_tokens || 0,
+          modelUsed: data.model || this.defaultModel,
+        };
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`[openai] Function call attempt ${attempt + 1} failed:`, lastError.message);
+
+        if (attempt < this.maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
+      }
+    }
+
+    throw lastError || new Error('OpenAI API call with functions failed');
   }
   
   // ============================================================================

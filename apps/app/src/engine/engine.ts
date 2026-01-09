@@ -33,6 +33,7 @@ import { applyInputPolicies, applyOutputPolicies, parseTemplateRules, getDefault
 import { adaptForChannel } from './adapters';
 import { checkRateLimit } from './rate-limiter';
 import { requireAiBudget, recordAiCost, CostLimitError, estimateCostFromTokens } from '@/lib/cost-tracker';
+import { parseTakeawayConfig } from '@/lib/takeaway/takeaway-config';
 
 // ============================================================================
 // Types
@@ -391,8 +392,28 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
       intent: routeResult.intent,
     };
     
+    // 12a. Check if takeaway conversational mode should be used
+    // If any suggested module is takeaway-order and config has useConversationalMode=true
+    let modulesToRun = routeResult.suggestedModules;
+    
+    if (modulesToRun.includes('takeaway-order') || modulesToRun.includes('order')) {
+      const orgSettings = await prisma.orgSettings.findUnique({
+        where: { orgId },
+        select: { takeawayConfig: true },
+      });
+      const takeawayConfig = parseTakeawayConfig(orgSettings?.takeawayConfig);
+      
+      if (takeawayConfig.enabled && takeawayConfig.useConversationalMode) {
+        // Replace takeaway-order with takeaway-conversational
+        modulesToRun = modulesToRun.map(m => 
+          (m === 'takeaway-order' || m === 'order') ? 'takeaway-conversational' : m
+        );
+        console.log('[engine] Using conversational mode for takeaway order');
+      }
+    }
+    
     // 13. Run modules
-    const moduleResult = await runModules(routeResult.suggestedModules, moduleContext);
+    const moduleResult = await runModules(modulesToRun, moduleContext);
     
     // 14. Apply output policies
     const outputPolicyResult = applyOutputPolicies(moduleResult.responseText, { rules });

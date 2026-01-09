@@ -55,6 +55,8 @@ export interface TemplatesConfig {
 export interface TakeawayConfig {
   /** Whether takeaway ordering is enabled for this org */
   enabled: boolean;
+  /** Use conversational mode (LLM with function calls) instead of intent-based */
+  useConversationalMode: boolean;
   /** Default pickup mode: 'asap' or 'time' (ask for specific time) */
   defaultPickupMode: 'asap' | 'time';
   /** Minimum notice in minutes for pickup */
@@ -127,6 +129,7 @@ export const DEFAULT_TEMPLATES_CONFIG: TemplatesConfig = {
 
 export const DEFAULT_TAKEAWAY_CONFIG: TakeawayConfig = {
   enabled: false,
+  useConversationalMode: false,
   defaultPickupMode: 'asap',
   minNoticeMinutes: 20,
   maxItems: 30,
@@ -157,6 +160,7 @@ export function parseTakeawayConfig(configJson: unknown): TakeawayConfig {
 
   return {
     enabled: typeof config.enabled === 'boolean' ? config.enabled : false,
+    useConversationalMode: typeof config.useConversationalMode === 'boolean' ? config.useConversationalMode : false,
     defaultPickupMode: parsePickupMode(config.defaultPickupMode),
     minNoticeMinutes: parsePositiveInt(config.minNoticeMinutes, 20),
     maxItems: parsePositiveInt(config.maxItems, 30),

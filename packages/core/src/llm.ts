@@ -77,6 +77,38 @@ export interface GenerateResponseOptions {
 }
 
 /**
+ * Function call definition for LLM
+ */
+export interface LLMFunctionDef {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+/**
+ * Function call result from LLM
+ */
+export interface LLMFunctionCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+/**
+ * Chat completion with functions result
+ */
+export interface ChatCompletionWithFunctionsResult {
+  content: string | null;
+  functionCalls: LLMFunctionCall[] | null;
+  inputTokens: number;
+  outputTokens: number;
+  modelUsed: string;
+}
+
+/**
  * LLM Provider configuration
  */
 export interface LLMProviderConfig {
@@ -111,6 +143,16 @@ export interface LLMProvider {
    * Uses default (higher quality) model
    */
   generateResponse(options: GenerateResponseOptions): Promise<ResponseGenerationResult>;
+  
+  /**
+   * Chat completion with function calling support
+   * Used for conversational modules with tool use
+   */
+  chatCompletionWithFunctions?(
+    messages: LLMMessage[],
+    functions: LLMFunctionDef[],
+    options?: { temperature?: number; maxTokens?: number }
+  ): Promise<ChatCompletionWithFunctionsResult>;
   
   /**
    * Check if the provider is configured and ready

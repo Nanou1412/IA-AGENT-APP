@@ -16,5 +16,8 @@ export type {
   LLMProviderConfig,
   LLMProvider,
   LLMProviderFactory,
+  LLMFunctionDef,
+  LLMFunctionCall,
+  ChatCompletionWithFunctionsResult,
 } from './llm';
 export { registerLLMProvider, getLLMProvider, listLLMProviders } from './llm';
