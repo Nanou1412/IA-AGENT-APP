@@ -31,6 +31,11 @@ import {
 import { withRequestContext, generateCorrelationId, logWithContext, getCorrelationId } from '@/lib/correlation';
 import { increment, METRIC_NAMES } from '@/lib/metrics';
 import { alertStripePaymentFailure, alertCriticalError, alertSubscriptionCanceled } from '@/lib/alerts';
+import { sendOrderConfirmationSms } from '@/lib/sms';
+import { getShortOrderId, formatPickupTime } from '@/lib/takeaway/order-manager';
+import { notifyBusinessOfOrder } from '@/engine/modules/takeaway-notifications';
+import { parseTakeawayConfig } from '@/lib/takeaway/takeaway-config';
+import { canUseModuleWithKillSwitch } from '@/lib/feature-gating';
 
 // Disable body parsing - we need raw body for signature verification
 export const dynamic = 'force-dynamic';
@@ -647,8 +652,61 @@ async function handleOrderCheckoutCompleted(
   
   console.log(`[stripe-webhook] Order ${orderId} payment completed and order confirmed`);
   
-  // TODO: Send business notification (order confirmed after payment)
-  // TODO: Send customer confirmation SMS
+  // Send customer confirmation SMS
+  const order = paymentLink.order;
+  const shortId = getShortOrderId(orderId);
+  const pickupTimeStr = order.pickupTime ? formatPickupTime(order.pickupTime, order.pickupMode) : undefined;
+  
+  try {
+    const smsResult = await sendOrderConfirmationSms({
+      orgId,
+      customerPhone: order.customerPhone,
+      orderId,
+      shortOrderId: shortId,
+      pickupTime: pickupTimeStr,
+      customerName: order.customerName || undefined,
+    });
+    
+    if (smsResult.success) {
+      console.log(`[stripe-webhook] Order confirmation SMS sent for order ${orderId}`);
+    } else {
+      console.warn(`[stripe-webhook] Failed to send order confirmation SMS for order ${orderId}:`, smsResult.error);
+    }
+  } catch (smsError) {
+    console.error(`[stripe-webhook] Error sending order confirmation SMS:`, smsError);
+    // Don't fail the webhook - SMS is non-critical
+  }
+  
+  // Send business notification (order confirmed after payment)
+  try {
+    const orgSettings = await prisma.orgSettings.findUnique({
+      where: { orgId },
+      select: { takeawayConfig: true },
+    });
+    
+    const takeawayConfig = parseTakeawayConfig(orgSettings?.takeawayConfig);
+    
+    // Create a simple canUseModule function for the notification
+    const org = await prisma.org.findUnique({
+      where: { id: orgId },
+      include: { settings: true, industryConfig: true },
+    });
+    
+    if (org) {
+      const canUseModule = (module: string) => canUseModuleWithKillSwitch(module, { org, settings: org.settings });
+      
+      const notifyResult = await notifyBusinessOfOrder(orgId, orderId, takeawayConfig, canUseModule);
+      
+      if (notifyResult.success) {
+        console.log(`[stripe-webhook] Business notification sent for order ${orderId} via ${notifyResult.method}`);
+      } else if (notifyResult.error) {
+        console.warn(`[stripe-webhook] Failed to send business notification for order ${orderId}:`, notifyResult.error);
+      }
+    }
+  } catch (notifyError) {
+    console.error(`[stripe-webhook] Error sending business notification:`, notifyError);
+    // Don't fail the webhook - notification is non-critical
+  }
 }
 
 /**
