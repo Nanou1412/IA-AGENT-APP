@@ -209,6 +209,80 @@ function validateItemsAgainstMenu(
   };
 }
 
+// ============================================================================
+// Order Item Extraction from User Text
+// ============================================================================
+
+interface ExtractedOrderItem {
+  name: string;
+  quantity: number;
+  notes?: string;
+}
+
+/**
+ * Extract order items from user text using menu-based matching
+ * Uses fuzzy matching against menu items and common quantity patterns
+ */
+function extractItemsFromText(
+  userText: string,
+  menuConfig: MenuConfig
+): ExtractedOrderItem[] {
+  const items: ExtractedOrderItem[] = [];
+  const text = userText.toLowerCase();
+  
+  // Common quantity patterns
+  const quantityPatterns = [
+    { pattern: /(?:two|2)\s+/, quantity: 2 },
+    { pattern: /(?:three|3)\s+/, quantity: 3 },
+    { pattern: /(?:four|4)\s+/, quantity: 4 },
+    { pattern: /(?:five|5)\s+/, quantity: 5 },
+    { pattern: /(?:a|one|1)\s+/, quantity: 1 },
+  ];
+  
+  // For each menu item, check if it's mentioned in the text
+  for (const menuItem of menuConfig.items) {
+    if (!menuItem.available) continue;
+    
+    const nameLower = menuItem.name.toLowerCase();
+    const allTerms = [
+      nameLower,
+      ...(menuItem.keywords || []).map(k => k.toLowerCase()),
+    ];
+    
+    for (const term of allTerms) {
+      if (text.includes(term)) {
+        // Try to find quantity before the term
+        let quantity = 1;
+        const termIndex = text.indexOf(term);
+        const textBefore = text.substring(Math.max(0, termIndex - 20), termIndex);
+        
+        for (const qp of quantityPatterns) {
+          if (qp.pattern.test(textBefore)) {
+            quantity = qp.quantity;
+            break;
+          }
+        }
+        
+        // Check if we already added this item (avoid duplicates from keyword matches)
+        const alreadyAdded = items.some(i => 
+          i.name.toLowerCase() === nameLower || 
+          findMenuItem(menuConfig, i.name)?.id === menuItem.id
+        );
+        
+        if (!alreadyAdded) {
+          items.push({
+            name: menuItem.name, // Use canonical name
+            quantity,
+          });
+        }
+        break; // Found a match for this menu item
+      }
+    }
+  }
+  
+  return items;
+}
+
 /**
  * Build order summary with prices if available
  */
@@ -373,13 +447,64 @@ async function handleAddItems(
   orderState: OrderSessionState,
   existingOrder: Awaited<ReturnType<typeof prisma.order.findUnique>> & { items?: { name: string; quantity: number; options: unknown; notes: string | null }[] } | null
 ): Promise<ModuleResult> {
-  const { parsedOrder, sessionMetadata } = context;
+  const { parsedOrder, sessionMetadata, userText } = context;
 
   // Get customer phone from session or context
-  const customerPhone = sessionMetadata.customerPhone as string || context.userText;
+  const customerPhone = sessionMetadata.customerPhone as string || userText;
 
-  // If we don't have items from LLM parsing, we need to ask
-  if (!parsedOrder?.items || parsedOrder.items.length === 0) {
+  // Try to extract items from user text if not provided in parsedOrder
+  let orderItems = parsedOrder?.items || [];
+  
+  if (orderItems.length === 0 && menuConfig.enabled) {
+    // Try to extract items from user text using menu-based matching
+    const extractedItems = extractItemsFromText(userText, menuConfig);
+    if (extractedItems.length > 0) {
+      orderItems = extractedItems;
+      console.log('[takeaway-order] Extracted items from text:', extractedItems);
+    }
+  }
+
+  // If we're waiting for specific info (name, pickup time), try to extract it from user text
+  const awaiting = sessionMetadata.awaiting as string | undefined;
+  let capturedName = parsedOrder?.customerName || orderState.customerName;
+  
+  if (awaiting === 'name' && !capturedName) {
+    // Try to extract name from user text (simple heuristics)
+    const namePatterns = [
+      /my name is (\w+(?:\s+\w+)?)/i,
+      /i am (\w+(?:\s+\w+)?)/i,
+      /i'm (\w+(?:\s+\w+)?)/i,
+      /it's (\w+(?:\s+\w+)?)/i,
+      /this is (\w+(?:\s+\w+)?)/i,
+      /call me (\w+(?:\s+\w+)?)/i,
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = userText.match(pattern);
+      if (match) {
+        capturedName = match[1].trim();
+        console.log('[takeaway-order] Extracted name from text:', capturedName);
+        break;
+      }
+    }
+    
+    // If still no match, assume the whole input is the name (if short enough)
+    if (!capturedName && userText.length < 50 && userText.split(/\s+/).length <= 4) {
+      capturedName = userText.trim();
+      console.log('[takeaway-order] Using user text as name:', capturedName);
+    }
+  }
+
+  // Check if we have items from draft or existing order
+  const hasDraftItems = orderState.draftItems && orderState.draftItems.length > 0;
+  const hasExistingItems = existingOrder?.items && existingOrder.items.length > 0;
+  
+  // If we don't have new items but have draft/existing items, use those
+  if (orderItems.length === 0 && (hasDraftItems || hasExistingItems)) {
+    console.log('[takeaway-order] Using existing draft items');
+    // Don't ask for items again - we already have them
+  } else if (orderItems.length === 0) {
+    // No items at all - ask for them
     // Check if we've asked too many times
     const clarificationCount = orderState.clarificationCount || 0;
     
@@ -402,7 +527,7 @@ async function handleAddItems(
   }
 
   // Validate items against menu (if menu is enabled)
-  const menuValidation = validateItemsAgainstMenu(parsedOrder.items, menuConfig);
+  const menuValidation = validateItemsAgainstMenu(orderItems, menuConfig);
   
   // If some items are not on menu and off-menu items not allowed
   if (!menuValidation.valid && menuValidation.invalidItems.length > 0) {
@@ -443,13 +568,13 @@ async function handleAddItems(
   const allItemsValidation = validateItemsAgainstMenu(newItems, menuConfig);
   const totalAmountCents = allItemsValidation.totalCents;
 
-  // Build draft
+  // Build draft - use captured name if available
   const draft: OrderDraft = {
-    customerName: parsedOrder.customerName || orderState.customerName,
+    customerName: capturedName || parsedOrder?.customerName || orderState.customerName,
     customerPhone,
-    pickupTime: parsedOrder.pickupTime || (orderState.pickupTime ? new Date(orderState.pickupTime) : undefined),
-    pickupMode: parsedOrder.pickupMode || orderState.pickupMode || config.defaultPickupMode,
-    notes: parsedOrder.notes || orderState.orderNotes,
+    pickupTime: parsedOrder?.pickupTime || (orderState.pickupTime ? new Date(orderState.pickupTime) : undefined),
+    pickupMode: parsedOrder?.pickupMode || orderState.pickupMode || config.defaultPickupMode,
+    notes: parsedOrder?.notes || orderState.orderNotes,
     items: newItems,
     totalAmountCents: totalAmountCents > 0 ? totalAmountCents : undefined,
   };

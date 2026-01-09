@@ -387,6 +387,8 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
       sessionMetadata: (await getSessionMetadata(sessionId)) || {},
       provider,
       canUseModule: (module: string): FeatureGateResult => canUseModuleWithKillSwitch(module, gatingContext),
+      // Pass classified intent for module-specific logic
+      intent: routeResult.intent,
     };
     
     // 13. Run modules

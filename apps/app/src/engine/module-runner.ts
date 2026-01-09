@@ -38,6 +38,8 @@ export interface ModuleContext {
   sessionMetadata: Record<string, unknown>;
   provider?: LLMProvider;
   canUseModule: (module: string) => FeatureGateResult;
+  // Intent classification result for module-specific logic
+  intent?: string;
 }
 
 export interface ModuleResult {
@@ -319,6 +321,14 @@ import('./modules/booking-calendar').then(({ bookingCalendarModule }) => {
   registerModule('booking', bookingCalendarModule); // Alias
 }).catch(err => {
   console.warn('[module-runner] Failed to load booking_calendar module:', err);
+});
+
+// Register takeaway order module (Phase 8 - Ordering)
+import('./modules/takeaway-order').then(({ takeawayOrderModule }) => {
+  registerModule('takeaway-order', takeawayOrderModule);
+  registerModule('order', takeawayOrderModule); // Alias for simpler routing
+}).catch(err => {
+  console.warn('[module-runner] Failed to load takeaway-order module:', err);
 });
 
 // ============================================================================
