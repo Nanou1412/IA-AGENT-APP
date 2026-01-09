@@ -36,6 +36,7 @@ import {
   type BookingConfig,
 } from '@/lib/google';
 import { BookingAction, BookingRequestStatus } from '@prisma/client';
+import { sendBookingConfirmationSms } from '@/lib/sms';
 
 // ============================================================================
 // Types
@@ -459,6 +460,37 @@ async function handleBookingCreate(
   // Build confirmation message
   const dateStr = formatDateTime(startTime, config.calendar.timezone);
   const summary = `${details.name}, ${details.partySize} guests on ${dateStr}`;
+
+  // Send SMS confirmation if enabled and phone is available
+  if (config.confirmations.sendSmsConfirmation && details.phone) {
+    try {
+      // Get business name from org
+      const org = await prisma.org.findUnique({
+        where: { id: orgId },
+        select: { name: true },
+      });
+
+      const smsResult = await sendBookingConfirmationSms({
+        orgId,
+        customerPhone: details.phone,
+        customerName: details.name || 'Guest',
+        partySize: details.partySize || 1,
+        dateTime: dateStr,
+        bookingId: eventResult.data.id,
+        businessName: org?.name,
+      });
+
+      if (smsResult.success) {
+        console.log(`[booking-calendar] Confirmation SMS sent for booking ${eventResult.data.id}`);
+      } else {
+        console.warn(`[booking-calendar] Failed to send confirmation SMS:`, smsResult.error);
+        // Don't fail the booking - SMS is non-critical
+      }
+    } catch (smsError) {
+      console.error(`[booking-calendar] Error sending confirmation SMS:`, smsError);
+      // Don't fail the booking - SMS is non-critical
+    }
+  }
 
   return {
     responseText: RESPONSES.bookingConfirmed(summary),
