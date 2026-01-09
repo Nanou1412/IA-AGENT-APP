@@ -95,9 +95,9 @@ export class OpenAIProvider implements LLMProvider {
    * Classify user intent using low-cost model
    */
   async classifyIntent(options: ClassifyIntentOptions): Promise<IntentClassificationResult> {
-    const { systemPrompt, intents, conversationHistory, userText, confidenceThreshold = 0.65 } = options;
+    const { systemPrompt, intents, intentDefinitions, conversationHistory, userText, confidenceThreshold = 0.65 } = options;
     
-    const classificationPrompt = this.buildClassificationPrompt(systemPrompt, intents, confidenceThreshold);
+    const classificationPrompt = this.buildClassificationPrompt(systemPrompt, intents, intentDefinitions, confidenceThreshold);
     
     const messages: OpenAIMessage[] = [
       { role: 'system', content: classificationPrompt },
@@ -161,20 +161,43 @@ export class OpenAIProvider implements LLMProvider {
   // Private Methods
   // ============================================================================
   
-  private buildClassificationPrompt(systemPrompt: string, intents: string[], confidenceThreshold: number): string {
+  private buildClassificationPrompt(
+    systemPrompt: string, 
+    intents: string[], 
+    intentDefinitions?: Record<string, { description?: string; examples?: string[] }>,
+    confidenceThreshold: number = 0.65
+  ): string {
+    // Build enriched intents list with descriptions and examples
+    const intentsSection = intents.map(intent => {
+      const def = intentDefinitions?.[intent];
+      if (def) {
+        let line = `- ${intent}`;
+        if (def.description) {
+          line += `: ${def.description}`;
+        }
+        if (def.examples && def.examples.length > 0) {
+          line += `\n  Examples: "${def.examples.slice(0, 4).join('", "')}"`;
+        }
+        return line;
+      }
+      return `- ${intent}`;
+    }).join('\n');
+
     return `You are an intent classification system. Your task is to classify the user's message into one of the allowed intents.
 
 ${systemPrompt}
 
 ALLOWED INTENTS:
-${intents.map(i => `- ${i}`).join('\n')}
+${intentsSection}
 - unknown (use when no intent matches or confidence is below ${confidenceThreshold})
 
 RULES:
 1. Return ONLY valid JSON with this exact structure: {"intent": "...", "confidence": 0.0-1.0, "rationale": "...", "suggestedModules": [...]}
 2. confidence must be a number between 0 and 1
-3. If unsure, use intent "unknown" with low confidence
-4. suggestedModules is optional - include if the intent suggests specific modules to use
+3. Match the user's message to the most appropriate intent based on descriptions and examples
+4. If the user wants to order food items, use "order.add_items"
+5. If unsure, use intent "unknown" with low confidence
+6. suggestedModules is optional - include if the intent suggests specific modules to use
 
 Classify the user's message:`;
   }

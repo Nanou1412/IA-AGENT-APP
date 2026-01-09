@@ -12,10 +12,16 @@ import { checkConfidencePolicy, type TemplateRules } from './policies';
 // Types
 // ============================================================================
 
+export interface IntentDefinition {
+  description?: string;
+  examples?: string[];
+}
+
 export interface IntentRouterConfig {
   provider?: LLMProvider;
   systemPrompt: string;
   intents: string[];
+  intentDefinitions?: Record<string, IntentDefinition>;
   rules: TemplateRules;
 }
 
@@ -52,13 +58,35 @@ export class IntentRouter {
   private provider: LLMProvider;
   private systemPrompt: string;
   private intents: string[];
+  private intentDefinitions: Record<string, IntentDefinition>;
   private rules: TemplateRules;
   
   constructor(config: IntentRouterConfig) {
     this.provider = config.provider || getOpenAIProvider();
     this.systemPrompt = config.systemPrompt;
     this.intents = config.intents.length > 0 ? config.intents : DEFAULT_INTENTS;
+    this.intentDefinitions = config.intentDefinitions || {};
     this.rules = config.rules;
+  }
+  
+  /**
+   * Build enriched intents string with descriptions and examples
+   */
+  private buildIntentsPrompt(): string {
+    return this.intents.map(intent => {
+      const def = this.intentDefinitions[intent];
+      if (def) {
+        let line = `- ${intent}`;
+        if (def.description) {
+          line += `: ${def.description}`;
+        }
+        if (def.examples && def.examples.length > 0) {
+          line += ` (examples: "${def.examples.slice(0, 3).join('", "')}")`;
+        }
+        return line;
+      }
+      return `- ${intent}`;
+    }).join('\n');
   }
   
   /**
@@ -85,6 +113,7 @@ export class IntentRouter {
       const classification = await this.provider.classifyIntent({
         systemPrompt: this.systemPrompt,
         intents: this.intents,
+        intentDefinitions: this.intentDefinitions,
         conversationHistory,
         userText,
         confidenceThreshold: this.rules.confidenceThreshold,
@@ -164,6 +193,27 @@ export class IntentRouter {
         return ['collect_contact'];
       case 'goodbye':
         return ['goodbye'];
+      
+      // Order-related intents -> takeaway-order module
+      case 'order.start':
+      case 'order.add_items':
+      case 'order.remove_item':
+      case 'order.modify':
+      case 'order.confirm':
+      case 'order.cancel':
+      case 'order.status':
+        return ['takeaway-order'];
+      
+      // Menu intents
+      case 'menu.inquiry':
+      case 'menu.recommendation':
+        return ['takeaway-order']; // Menu queries handled by takeaway module
+      
+      // Payment intents
+      case 'payment.request':
+      case 'payment.status':
+        return ['takeaway-order']; // Payment handled by takeaway module
+      
       case 'unknown':
       default:
         return ['handoff']; // Default to handoff for unknown
@@ -182,7 +232,8 @@ export function createIntentRouter(
   systemPrompt: string,
   intentsAllowed: unknown,
   rules: TemplateRules,
-  provider?: LLMProvider
+  provider?: LLMProvider,
+  intentDefinitions?: Record<string, IntentDefinition>
 ): IntentRouter {
   // Parse intents from JSON
   const intents = Array.isArray(intentsAllowed)
@@ -193,6 +244,7 @@ export function createIntentRouter(
     provider,
     systemPrompt,
     intents,
+    intentDefinitions,
     rules,
   });
 }

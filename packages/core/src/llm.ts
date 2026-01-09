@@ -45,11 +45,21 @@ export interface ResponseGenerationResult {
 }
 
 /**
+ * Intent definition with optional description and examples
+ */
+export interface IntentDef {
+  name: string;
+  description?: string;
+  examples?: string[];
+}
+
+/**
  * Options for intent classification
  */
 export interface ClassifyIntentOptions {
   systemPrompt: string;
   intents: string[];
+  intentDefinitions?: Record<string, { description?: string; examples?: string[] }>;
   conversationHistory: LLMMessage[];
   userText: string;
   confidenceThreshold?: number;

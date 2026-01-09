@@ -237,7 +237,11 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
     const systemPrompt = context.template?.systemPrompt || DEFAULT_SYSTEM_PROMPT;
     const intentsAllowed = context.template?.intentsAllowed;
     
-    const intentRouter = createIntentRouter(systemPrompt, intentsAllowed, rules, provider);
+    // Extract intent definitions from template for enriched classification
+    const templateDefinition = context.template?.definition as { intents?: Record<string, { description?: string; examples?: string[] }> } | undefined;
+    const intentDefinitions = templateDefinition?.intents;
+    
+    const intentRouter = createIntentRouter(systemPrompt, intentsAllowed, rules, provider, intentDefinitions);
     const routeResult = await intentRouter.classify(userText, conversationHistory);
     
     // 10. Check if handoff required by confidence
