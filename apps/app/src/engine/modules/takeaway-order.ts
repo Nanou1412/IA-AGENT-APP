@@ -38,6 +38,14 @@ import {
   type TakeawayPaymentConfig,
 } from '@/lib/takeaway/takeaway-payment-config';
 import {
+  parseMenuConfig,
+  findMenuItem,
+  calculateItemPrice,
+  formatPrice,
+  type MenuConfig,
+  type MenuItem,
+} from '@/lib/takeaway/menu-config';
+import {
   createOrderDraft,
   updateOrderDraft,
   confirmOrder,
@@ -116,6 +124,10 @@ const DEFAULT_RESPONSES = {
     `We need at least ${minutes} minutes notice for pickup. Would you like to pick up later?`,
   itemsUnclear: "I didn't quite catch that. Could you please repeat your order?",
   maxClarifications: "I'm having trouble understanding your order. Let me connect you with someone who can help.",
+  itemNotOnMenu: (itemName: string, suggestion?: string) =>
+    suggestion 
+      ? `I couldn't find "${itemName}" on our menu. Did you mean "${suggestion}"?`
+      : `I couldn't find "${itemName}" on our menu. Would you like me to tell you what we have available?`,
   
   // Confirmation
   orderConfirmed: (orderId: string) => 
@@ -127,6 +139,124 @@ const DEFAULT_RESPONSES = {
   modifyAfterConfirm: "To modify your confirmed order, please call us directly and we'll be happy to help.",
   cancelAfterConfirm: "To cancel your confirmed order, please call us directly.",
 };
+
+// ============================================================================
+// Menu Validation Helpers
+// ============================================================================
+
+interface ValidatedItem extends OrderItemDraft {
+  menuItemId?: string;
+  unitPriceCents?: number;
+}
+
+interface MenuValidationResult {
+  valid: boolean;
+  validItems: ValidatedItem[];
+  invalidItems: string[];
+  totalCents: number;
+}
+
+/**
+ * Validate order items against the menu
+ * Returns enriched items with prices if menu is enabled
+ */
+function validateItemsAgainstMenu(
+  items: OrderItemDraft[],
+  menuConfig: MenuConfig
+): MenuValidationResult {
+  const validItems: ValidatedItem[] = [];
+  const invalidItems: string[] = [];
+  let totalCents = 0;
+
+  for (const item of items) {
+    if (!menuConfig.enabled) {
+      // No menu - accept all items without validation
+      validItems.push(item);
+      continue;
+    }
+
+    const menuItem = findMenuItem(menuConfig, item.name);
+
+    if (menuItem) {
+      // Item found in menu - enrich with price
+      const unitPriceCents = calculateItemPrice(
+        menuItem,
+        item.options as Record<string, string | string[]> | undefined
+      );
+      
+      validItems.push({
+        ...item,
+        name: menuItem.name, // Use canonical name from menu
+        menuItemId: menuItem.id,
+        unitPriceCents,
+      });
+      
+      totalCents += unitPriceCents * item.quantity;
+    } else if (menuConfig.allowOffMenuItems) {
+      // Item not found but off-menu items allowed
+      validItems.push(item);
+    } else {
+      // Item not found and off-menu not allowed
+      invalidItems.push(item.name);
+    }
+  }
+
+  return {
+    valid: invalidItems.length === 0,
+    validItems,
+    invalidItems,
+    totalCents,
+  };
+}
+
+/**
+ * Build order summary with prices if available
+ */
+function buildOrderSummaryWithPrices(
+  items: ValidatedItem[],
+  notes: string | undefined,
+  currency: string = 'AUD'
+): string {
+  const lines = items.map((item) => {
+    let line = `${item.quantity}x ${item.name}`;
+    
+    if (item.unitPriceCents) {
+      const itemTotal = item.unitPriceCents * item.quantity;
+      line += ` - ${formatPrice(itemTotal, currency)}`;
+    }
+    
+    if (item.options && Object.keys(item.options).length > 0) {
+      const optionsList = Object.entries(item.options)
+        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+        .join(', ');
+      line += ` (${optionsList})`;
+    }
+    
+    if (item.notes) {
+      line += ` [${item.notes}]`;
+    }
+    
+    return line;
+  });
+
+  // Add total if we have prices
+  const hasAnyPrices = items.some((i) => i.unitPriceCents !== undefined);
+  if (hasAnyPrices) {
+    const total = items.reduce(
+      (sum, item) => sum + (item.unitPriceCents || 0) * item.quantity,
+      0
+    );
+    lines.push('');
+    lines.push(`Total: ${formatPrice(total, currency)}`);
+  }
+
+  if (notes) {
+    lines.push('');
+    lines.push(`Notes: ${notes}`);
+  }
+
+  return lines.join('\n');
+}
 
 // ============================================================================
 // Module Handler
@@ -152,10 +282,11 @@ export async function takeawayOrderModule(context: TakeawayModuleContext): Promi
   // Get takeaway config from org settings
   const orgSettings = await prisma.orgSettings.findUnique({
     where: { orgId },
-    select: { takeawayConfig: true, handoffPhone: true },
+    select: { takeawayConfig: true, menuConfig: true, handoffPhone: true },
   });
 
   const takeawayConfig = parseTakeawayConfig(orgSettings?.takeawayConfig);
+  const menuConfig = parseMenuConfig(orgSettings?.menuConfig);
   
   if (!takeawayConfig.enabled) {
     return {
@@ -193,12 +324,12 @@ export async function takeawayOrderModule(context: TakeawayModuleContext): Promi
 
       case 'modify':
         return await handleModification(
-          orgId, sessionId, context, takeawayConfig, orderState, existingOrder
+          orgId, sessionId, context, takeawayConfig, menuConfig, orderState, existingOrder
         );
 
       case 'add':
         return await handleAddItems(
-          orgId, sessionId, channel, context, takeawayConfig, orderState, existingOrder
+          orgId, sessionId, channel, context, takeawayConfig, menuConfig, orderState, existingOrder
         );
 
       case 'status':
@@ -212,7 +343,7 @@ export async function takeawayOrderModule(context: TakeawayModuleContext): Promi
       default:
         // Start new order or continue draft
         return await handleAddItems(
-          orgId, sessionId, channel, context, takeawayConfig, orderState, existingOrder
+          orgId, sessionId, channel, context, takeawayConfig, menuConfig, orderState, existingOrder
         );
     }
   } catch (error) {
@@ -238,6 +369,7 @@ async function handleAddItems(
   channel: string,
   context: TakeawayModuleContext,
   config: TakeawayConfig,
+  menuConfig: MenuConfig,
   orderState: OrderSessionState,
   existingOrder: Awaited<ReturnType<typeof prisma.order.findUnique>> & { items?: { name: string; quantity: number; options: unknown; notes: string | null }[] } | null
 ): Promise<ModuleResult> {
@@ -269,6 +401,24 @@ async function handleAddItems(
     };
   }
 
+  // Validate items against menu (if menu is enabled)
+  const menuValidation = validateItemsAgainstMenu(parsedOrder.items, menuConfig);
+  
+  // If some items are not on menu and off-menu items not allowed
+  if (!menuValidation.valid && menuValidation.invalidItems.length > 0) {
+    const firstInvalid = menuValidation.invalidItems[0];
+    return {
+      responseText: menuConfig.itemNotFoundMessage || DEFAULT_RESPONSES.itemNotOnMenu(firstInvalid),
+      handoffTriggered: false,
+      sessionMetadataUpdates: {
+        clarificationCount: (orderState.clarificationCount || 0) + 1,
+      },
+    };
+  }
+
+  // Use validated items (with prices if available)
+  const validatedNewItems = menuValidation.validItems;
+
   // Merge new items with existing
   const currentItems = existingOrder?.items?.map(i => ({
     name: i.name,
@@ -277,7 +427,7 @@ async function handleAddItems(
     notes: i.notes || undefined,
   })) || orderState.draftItems || [];
 
-  const newItems = [...currentItems, ...parsedOrder.items];
+  const newItems = [...currentItems, ...validatedNewItems];
 
   // Check max items limit
   const totalQuantity = newItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -706,6 +856,7 @@ async function handleModification(
   sessionId: string,
   context: TakeawayModuleContext,
   config: TakeawayConfig,
+  menuConfig: MenuConfig,
   orderState: OrderSessionState,
   existingOrder: Awaited<ReturnType<typeof prisma.order.findUnique>> | null
 ): Promise<ModuleResult> {
@@ -736,7 +887,7 @@ async function handleModification(
 
   // For draft/pending, treat as adding more items
   return handleAddItems(
-    orgId, sessionId, context.channel, context, config, orderState, existingOrder
+    orgId, sessionId, context.channel, context, config, menuConfig, orderState, existingOrder
   );
 }
 
