@@ -339,43 +339,29 @@ function buildConversationalPrompt(
   takeawayConfig: TakeawayConfig,
   orderState: OrderState
 ): string {
-  // Build menu text
+  // Build compact menu text
   const menuText = menuConfig.items
     .filter(i => i.available)
-    .map(i => `- ${i.name}: ${formatPrice(i.priceCents, menuConfig.currency)}${i.description ? ` - ${i.description}` : ''}`)
-    .join('\n');
+    .map(i => `${i.name}: ${formatPrice(i.priceCents, menuConfig.currency)}`)
+    .join(' | ');
 
   // Current order state
   const currentOrderText = orderState.items.length > 0
     ? orderState.items.map(i => `${i.quantity}x ${i.name}`).join(', ')
     : 'Empty';
 
-  return `You are a friendly restaurant assistant taking phone orders. Be conversational and helpful, like talking to a real person.
+  // Optimized prompt for speed - minimal tokens
+  return `Phone order assistant. Be brief (1-2 sentences max).
 
-## STRICT RULES - YOU MUST FOLLOW THESE:
-1. You can ONLY add items that are on the menu below. If someone asks for something not on the menu, politely say it's not available and suggest alternatives.
-2. Never make up prices - use the menu prices exactly.
-3. Never accept items like "water", "bread", etc. unless they are explicitly on the menu.
-4. When the order seems complete, summarize it and ask for confirmation.
-5. Always ask for the customer's name before confirming.
-6. Be brief in voice - this is a phone call, not a chat.
+MENU: ${menuText}
 
-## OUR MENU:
-${menuText}
+ORDER: ${currentOrderText}${orderState.customerName ? ` | Name: ${orderState.customerName}` : ''}
 
-## CURRENT ORDER:
-${currentOrderText}
-${orderState.customerName ? `Customer: ${orderState.customerName}` : 'Customer name: Not provided yet'}
-
-## HOW TO RESPOND:
-- Keep responses SHORT for voice (1-2 sentences max)
-- Be warm and friendly
-- If they order something not on the menu, say "I'm sorry, we don't have that. Would you like to try our [suggest similar item]?"
-- Use the functions to add items, never just say "I've added it" without calling the function
-- After adding items, ask if they want anything else
-- When they're done, summarize and ask to confirm
-
-Remember: This is a PHONE conversation. Be natural but concise.`;
+RULES:
+- ONLY accept menu items. Decline others politely, suggest alternatives.
+- Use exact menu prices.
+- Ask name before confirming.
+- Use functions to add/remove items.`;
 }
 
 // ============================================================================
