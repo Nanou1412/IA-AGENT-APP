@@ -25,6 +25,7 @@ import {
 } from '@prisma/client';
 import type { LLMMessage } from '@repo/core';
 import { canUseModuleWithKillSwitch, type FeatureGateResult, type OrgContextWithIndustry } from '@/lib/feature-gating';
+import { getCachedOrgContext, getCachedTemplate } from '@/lib/cached-config';
 
 import { getOpenAIProvider, ENGINE_CONFIG, createOpenAIProvider } from './llm';
 import { createIntentRouter, DEFAULT_INTENTS, type RouteResult } from './intent-router';
@@ -584,76 +585,44 @@ export async function handleInboundCallGreeting(
 }
 
 // ============================================================================
-// Context Loading
+// Context Loading (with caching for performance)
 // ============================================================================
 
 async function loadEngineContext(orgId: string): Promise<EngineContext | null> {
   try {
-    // Load org with settings and industry config
-    const org = await prisma.org.findUnique({
-      where: { id: orgId },
-      include: {
-        settings: true,
-        industryConfig: true,
-      },
-    });
+    // Use cached org context (reduces ~3 DB queries to 1 on cache hit)
+    const cachedContext = await getCachedOrgContext(orgId);
     
-    if (!org || !org.settings) {
+    if (!cachedContext) {
       console.error(`[engine] Org or settings not found: ${orgId}`);
       return null;
     }
     
-    // Load active template assignment
-    const assignment = await prisma.agentAssignment.findFirst({
-      where: {
-        orgId,
-        status: 'active',
-      },
-      include: {
-        template: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-    
-    // Fallback to industry default template if no assignment
-    let template = assignment?.template || null;
-    
-    if (!template && org.industryConfig?.defaultTemplateSlug) {
-      template = await prisma.agentTemplate.findFirst({
-        where: {
-          slug: org.industryConfig.defaultTemplateSlug,
-          version: org.industryConfig.defaultTemplateVersion || undefined,
-        },
-        orderBy: {
-          version: 'desc',
-        },
-      });
-    }
+    // Get cached template (reduces 1-2 DB queries on cache hit)
+    const template = await getCachedTemplate(orgId);
     
     return {
       org: {
-        id: org.id,
-        name: org.name,
-        industry: org.industry,
-        industryConfig: org.industryConfig ? {
-          id: org.industryConfig.id,
-          slug: org.industryConfig.slug,
-          rulesJson: org.industryConfig.rulesJson,
-          modules: org.industryConfig.modules,
+        id: cachedContext.org.id,
+        name: cachedContext.org.name,
+        industry: cachedContext.org.industry,
+        industryConfig: cachedContext.industryConfig ? {
+          id: cachedContext.industryConfig.id,
+          slug: cachedContext.industryConfig.slug,
+          rulesJson: cachedContext.industryConfig.rulesJson,
+          modules: cachedContext.industryConfig.modules,
         } : null,
       },
       settings: {
-        id: org.settings.id,
-        sandboxStatus: org.settings.sandboxStatus,
-        billingStatus: org.settings.billingStatus,
-        faqText: org.settings.faqText,
-        handoffPhone: org.settings.handoffPhone,
-        handoffEmail: org.settings.handoffEmail,
-        handoffSmsTo: org.settings.handoffSmsTo,
-        handoffReplyText: org.settings.handoffReplyText,
-        aiModelOverride: org.settings.aiModelOverride,
+        id: cachedContext.settings.id,
+        sandboxStatus: cachedContext.settings.sandboxStatus,
+        billingStatus: cachedContext.settings.billingStatus,
+        faqText: cachedContext.settings.faqText,
+        handoffPhone: cachedContext.settings.handoffPhone,
+        handoffEmail: cachedContext.settings.handoffEmail,
+        handoffSmsTo: cachedContext.settings.handoffSmsTo,
+        handoffReplyText: cachedContext.settings.handoffReplyText,
+        aiModelOverride: cachedContext.settings.aiModelOverride,
       },
       template: template ? {
         id: template.id,
