@@ -438,6 +438,11 @@ async function handleAddItems(
     };
   }
 
+  // Calculate total from validated items (menu prices)
+  // Re-calculate to include existing items too
+  const allItemsValidation = validateItemsAgainstMenu(newItems, menuConfig);
+  const totalAmountCents = allItemsValidation.totalCents;
+
   // Build draft
   const draft: OrderDraft = {
     customerName: parsedOrder.customerName || orderState.customerName,
@@ -446,6 +451,7 @@ async function handleAddItems(
     pickupMode: parsedOrder.pickupMode || orderState.pickupMode || config.defaultPickupMode,
     notes: parsedOrder.notes || orderState.orderNotes,
     items: newItems,
+    totalAmountCents: totalAmountCents > 0 ? totalAmountCents : undefined,
   };
 
   // Check what's missing
@@ -521,8 +527,9 @@ async function handleAddItems(
   // Request confirmation
   await requestOrderConfirmation(result.orderId!);
 
-  // Build summary for confirmation
-  const summary = buildOrderSummary(newItems, draft.notes);
+  // Build summary for confirmation (with prices if available)
+  const summaryItems = allItemsValidation.validItems;
+  const summary = buildOrderSummaryWithPrices(summaryItems, draft.notes, menuConfig.currency);
   const pickupTimeStr = formatPickupTime(draft.pickupTime || null, draft.pickupMode || null);
 
   const confirmationMessage = renderTemplate(config.templates.customerNeedConfirmationText, {

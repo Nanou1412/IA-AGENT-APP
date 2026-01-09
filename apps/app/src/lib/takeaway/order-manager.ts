@@ -28,6 +28,8 @@ export interface OrderDraft {
   pickupMode?: 'asap' | 'time';
   notes?: string;
   items: OrderItemDraft[];
+  /** Total amount in cents (calculated from menu prices) */
+  totalAmountCents?: number;
 }
 
 export interface CreateOrderResult {
@@ -128,6 +130,8 @@ export async function createOrderDraft(
         pickupMode: draft.pickupMode || 'asap',
         notes: draft.notes,
         totalItems: draft.items.reduce((sum, item) => sum + item.quantity, 0),
+        // Store payment amount if provided (from menu prices)
+        paymentAmountCents: draft.totalAmountCents,
         summaryText,
         idempotencyKey,
         items: {
@@ -226,6 +230,8 @@ export async function updateOrderDraft(
         summaryText,
         totalItems,
         idempotencyKey: newIdempotencyKey,
+        // Update payment amount if provided
+        paymentAmountCents: updates.totalAmountCents ?? existing.paymentAmountCents,
       },
       include: { items: true },
     });
