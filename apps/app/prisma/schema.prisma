@@ -102,6 +102,7 @@ model OrgSettings {
   bookingConfig           Json?
   takeawayConfig          Json?
   takeawayPaymentConfig   Json?
+  menuConfig              Json?
   monthlyAiBudgetUsd      Float?                 @default(50)
   monthlyTwilioBudgetUsd  Float?                 @default(30)
   hardBudgetLimit         Boolean                @default(true)

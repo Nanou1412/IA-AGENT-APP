@@ -66,3 +66,23 @@ export {
   type PaymentMessagesConfig,
   type PaymentRetryConfig,
 } from './takeaway-payment-config';
+
+// Menu configuration
+export {
+  // Config parsing
+  parseMenuConfig,
+  findMenuItem,
+  calculateItemPrice,
+  formatPrice,
+  getMenuSummary,
+  getItemsByCategory,
+  // Default configs
+  DEFAULT_MENU_CONFIG,
+  SAMPLE_MENU_CONFIG,
+  // Types
+  type MenuConfig,
+  type MenuItem,
+  type MenuCategory,
+  type MenuItemOption,
+  type MenuOptionGroup,
+} from './menu-config';

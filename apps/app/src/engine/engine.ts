@@ -331,6 +331,7 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
         bookingConfig: null, // Phase 7.1 - booking config
         takeawayConfig: null, // Phase 7.2 - takeaway config
         takeawayPaymentConfig: null, // Phase 7.3 - payment config
+        menuConfig: null, // Menu config for takeaway
         // Phase 8: Production Readiness fields
         monthlyAiBudgetUsd: 50,
         monthlyTwilioBudgetUsd: 30,

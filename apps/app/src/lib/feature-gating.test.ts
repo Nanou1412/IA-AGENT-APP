@@ -64,6 +64,8 @@ function createContext(overrides: {
       takeawayConfig: null,
       // Payment fields (Phase 7.3)
       takeawayPaymentConfig: null,
+      // Menu config
+      menuConfig: null,
       // Phase 8: Production Readiness
       monthlyAiBudgetUsd: 50,
       monthlyTwilioBudgetUsd: 30,
