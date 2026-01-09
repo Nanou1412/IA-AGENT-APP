@@ -19,6 +19,7 @@ import { prisma } from '@/lib/prisma';
 import { OrderStatus, OrderPaymentStatus } from '@prisma/client';
 import { getOpenAIProvider, createOpenAIProvider, ENGINE_CONFIG } from '../llm';
 import type { LLMMessage, LLMFunctionDef } from '@repo/core';
+import { getCachedOrgSettings } from '@/lib/cached-config';
 import {
   parseTakeawayConfig,
   type TakeawayConfig,
@@ -454,16 +455,8 @@ export async function takeawayConversationalModule(
     };
   }
 
-  // Get configs
-  const orgSettings = await prisma.orgSettings.findUnique({
-    where: { orgId },
-    select: { 
-      takeawayConfig: true, 
-      menuConfig: true, 
-      takeawayPaymentConfig: true,
-      handoffPhone: true,
-    },
-  });
+  // Get configs (cached for performance - reduces DB calls from 15 to 1-2)
+  const orgSettings = await getCachedOrgSettings(orgId);
 
   const takeawayConfig = parseTakeawayConfig(orgSettings?.takeawayConfig);
   const menuConfig = parseMenuConfig(orgSettings?.menuConfig);
