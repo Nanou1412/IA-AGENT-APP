@@ -78,22 +78,16 @@ export async function POST(req: NextRequest) {
     // Get DTMF input
     const digits = params.Digits || '';
     
-    console.log(`[twilio-voice-input] Input received: digits="${digits}" orgId=${orgId} callSid=${callSid}`);
-    
     // Validate Twilio signature in production
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
-    
-    // TEMPORARY: Skip signature validation - signature mismatch issue to debug later
-    const skipSignature = true; // Force skip for now
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
     
     if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
         console.error('[twilio-voice-input] Invalid signature');
         return twimlResponse(sayAndHangup(DEFAULT_CALL_DENY_TEXT));
       }
-    } else if (skipSignature) {
-      console.warn('[twilio-voice-input] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
     }
     
     // Log input received

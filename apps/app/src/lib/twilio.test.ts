@@ -24,14 +24,15 @@ function createMockRequest(options: {
 
 describe('getPublicRequestUrl', () => {
   describe('Local development (no proxy headers)', () => {
-    it('returns localhost URL when no proxy headers', () => {
+    it('returns production fallback URL when no proxy headers or host', () => {
       const req = createMockRequest({
         pathname: '/api/twilio/sms',
       });
 
       const result = getPublicRequestUrl(req);
       
-      expect(result).toBe('https://localhost:3001/api/twilio/sms');
+      // Falls back to production URL when no headers present
+      expect(result).toBe('https://ia-agent-app-app.vercel.app/api/twilio/sms');
     });
 
     it('includes query string in URL', () => {
@@ -42,7 +43,7 @@ describe('getPublicRequestUrl', () => {
 
       const result = getPublicRequestUrl(req);
       
-      expect(result).toBe('https://localhost:3001/api/twilio/status?test=1');
+      expect(result).toBe('https://ia-agent-app-app.vercel.app/api/twilio/status?test=1');
     });
   });
 

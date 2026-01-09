@@ -55,23 +55,17 @@ export async function POST(req: NextRequest) {
     
     const { CallSid, QueueName, QueueTime, QueuePosition } = payload;
     
-    console.log(`[twilio-voice-wait] Queue wait: ${CallSid} in ${QueueName} (position: ${QueuePosition}, time: ${QueueTime}s)`);
-    
     // Validate Twilio signature in production
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
-    
-    // TEMPORARY: Skip signature validation - signature mismatch issue to debug later
-    const skipSignature = true; // Force skip for now
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
     
     if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
-        console.error('[twilio-voice-wait] Invalid signature for URL:', webhookUrl);
+        console.error('[twilio-voice-wait] Invalid signature');
         // Return default wait message anyway - don't break the call
         return twimlResponse(generateQueueWaitTwiML(DEFAULT_CALL_QUEUE_WAIT_TEXT, 10));
       }
-    } else if (skipSignature) {
-      console.warn('[twilio-voice-wait] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
     }
     
     // Get org-specific wait text if orgId available
@@ -82,7 +76,7 @@ export async function POST(req: NextRequest) {
         const voiceConfig = await getVoiceConfig(orgId);
         waitText = voiceConfig.callQueueWaitText;
       } catch (error) {
-        console.warn(`[twilio-voice-wait] Could not get voice config for org ${orgId}:`, error);
+        // Ignore - use default
       }
     }
     

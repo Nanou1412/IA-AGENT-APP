@@ -96,53 +96,32 @@ export async function POST(req: NextRequest) {
         return twimlResponse(generateUnmappedCallTwiML());
       }
     
-    console.log(`[twilio-voice] Inbound call: ${CallSid} from ${From} to ${To} (${CallStatus})`);
+    logWithContext('info', 'Inbound call received', { CallSid, From, To, CallStatus });
     
     // Validate Twilio signature using real public URL (proxy-aware)
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
     
-    // TEMPORARY: Skip signature validation - signature mismatch issue to debug later
-    // TODO: Fix signature validation and remove this bypass
-    const skipSignature = true; // Force skip for now
-    
-    // DEBUG: Log signature validation details
-    console.log('[twilio-voice] DEBUG Signature validation:', {
-      webhookUrl,
-      signaturePresent: !!signature,
-      signatureLength: signature?.length || 0,
-      skipSignature,
-      nodeEnv: process.env.NODE_ENV,
-      authTokenConfigured: !!process.env.TWILIO_AUTH_TOKEN,
-      authTokenLength: process.env.TWILIO_AUTH_TOKEN?.length || 0,
-    });
+    // Skip signature validation via env var (for debugging only)
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
     
     if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
-        console.error('[twilio-voice] Invalid signature for URL:', webhookUrl);
-        console.error('[twilio-voice] Signature received:', signature ? 'present' : 'MISSING');
+        console.error('[twilio-voice] Invalid signature');
         await logTwilioAudit('twilio.voice.invalid_signature', {
           callSid: CallSid,
           from: From,
           to: To,
-          webhookUrl,
         });
-        // Return empty response - don't give info to potential attacker
         return twimlResponse(generateUnmappedCallTwiML());
       }
-    } else if (skipSignature) {
-      console.warn('[twilio-voice] Signature validation SKIPPED (SKIP_TWILIO_SIGNATURE=1)');
-    } else if (!signature) {
-      console.warn('[twilio-voice] No signature in dev mode - skipping validation');
     }
     
     // Resolve org from To number
-    console.log(`[twilio-voice] Looking up endpoint for To=${To}`);
     const endpoint = await resolveOrgFromVoiceNumber(To);
-    console.log(`[twilio-voice] Lookup result:`, endpoint ? `orgId=${endpoint.orgId}` : 'NOT FOUND');
     
     if (!endpoint) {
-      console.warn(`[twilio-voice] No endpoint found for: ${To}`);
+      logWithContext('warn', 'No endpoint found', { To });
       
       // Log unmapped call
       await createCallLog({
@@ -178,9 +157,7 @@ export async function POST(req: NextRequest) {
     });
     
     if (logResult.isDuplicate) {
-      console.log(`[twilio-voice] Duplicate call, skipping: ${CallSid}`);
       // For duplicate calls, return minimal TwiML to prevent re-processing
-      // Twilio might retry, so we just acknowledge
       return twimlResponse(generateUnmappedCallTwiML('Your call is being processed. Please hold.'));
     }
     
@@ -226,8 +203,6 @@ export async function POST(req: NextRequest) {
     
     // Check voice-specific config (org toggle)
     if (!voiceConfig.voiceEnabled) {
-      console.log(`[twilio-voice] Voice not enabled for org: ${orgId}`);
-      
       await updateCallLogDenied(CallSid, 'config', 'Voice channel not enabled for this organization');
       
       await logTwilioAudit('twilio.voice.denied', {

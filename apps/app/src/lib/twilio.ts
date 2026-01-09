@@ -17,7 +17,8 @@ export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 export const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID;
 
 // App URL for webhook signature validation (fallback only)
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+// IMPORTANT: Must match the production URL for signature validation to work
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://ia-agent-app-app.vercel.app';
 
 // ============================================================================
 // Twilio Client

@@ -44,22 +44,17 @@ export async function POST(req: NextRequest) {
     
     // Validate required fields
     if (!CallSid || !CallStatus) {
-      console.error('[twilio-voice-status] Missing required fields:', { CallSid, CallStatus });
       return new NextResponse('OK', { status: 200 });
     }
-    
-    console.log(`[twilio-voice-status] Status update: ${CallSid} -> ${CallStatus} (duration: ${CallDuration}s)`);
     
     // Validate Twilio signature in production
     const signature = req.headers.get('x-twilio-signature') || '';
     const webhookUrl = getPublicRequestUrl(req);
-    
-    // TEMPORARY: Skip signature validation - signature mismatch issue to debug later
-    const skipSignature = true; // Force skip for now
+    const skipSignature = process.env.SKIP_TWILIO_SIGNATURE === '1';
     
     if (process.env.NODE_ENV === 'production' && !skipSignature) {
       if (!validateTwilioSignature(signature, webhookUrl, params)) {
-        console.error('[twilio-voice-status] Invalid signature for URL:', webhookUrl);
+        console.error('[twilio-voice-status] Invalid signature');
         return new NextResponse('OK', { status: 200 });
       }
     }
@@ -70,9 +65,8 @@ export async function POST(req: NextRequest) {
         durationSeconds: CallDuration ? parseInt(CallDuration, 10) : undefined,
         recordingUrl: RecordingUrl,
       });
-    } catch (error) {
-      // Call might not exist (if it was unmapped)
-      console.warn(`[twilio-voice-status] Could not update call log for ${CallSid}:`, error);
+    } catch {
+      // Call might not exist (if it was unmapped) - ignore
     }
     
     // Get org from call log for audit
