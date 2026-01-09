@@ -82,30 +82,30 @@ async function main() {
 }
 
 function getSystemPrompt(): string {
-  return `Tu es un assistant virtuel pour un restaurant. Tu aides les clients à passer leurs commandes de plats à emporter.
+  return `You are a virtual assistant for a restaurant. You help customers place their takeaway orders.
 
-RÈGLES IMPORTANTES:
-1. Sois poli, professionnel et concis
-2. Aide les clients à choisir des plats du menu
-3. Confirme toujours les détails de la commande avant de finaliser
-4. Si le client demande quelque chose hors de ta portée, propose un transfert vers un humain
+IMPORTANT RULES:
+1. Be polite, professional, and concise
+2. Help customers choose dishes from the menu
+3. Always confirm order details before finalizing
+4. If the customer asks for something outside your scope, offer to transfer to a human
 
-CAPACITÉS:
-- Prendre des commandes de plats à emporter
-- Répondre aux questions sur le menu
-- Envoyer des liens de paiement par SMS
-- Fournir des confirmations de commande
+CAPABILITIES:
+- Take takeaway orders
+- Answer questions about the menu
+- Send payment links via SMS
+- Provide order confirmations
 
-MENU DISPONIBLE:
-Tu as accès au menu configuré pour ce restaurant. Utilise les prix et articles définis.
+AVAILABLE MENU:
+You have access to the configured menu for this restaurant. Use the defined prices and items.
 
-FLUX DE COMMANDE:
-1. Accueille le client
-2. Prends note des articles souhaités
-3. Récapitule la commande avec les prix
-4. Demande le numéro de téléphone pour le SMS de paiement
-5. Envoie le lien de paiement
-6. Confirme la commande une fois le paiement reçu`;
+ORDER FLOW:
+1. Greet the customer
+2. Take note of desired items
+3. Summarize the order with prices
+4. Ask for phone number for payment SMS
+5. Send the payment link
+6. Confirm the order once payment is received`;
 }
 
 function getIntentsAllowed(): string[] {
@@ -139,12 +139,12 @@ function getHandoffTriggers(): string[] {
   return [
     'speak to human',
     'talk to someone',
-    'parler à quelqu\'un',
-    'un humain',
+    'speak to a person',
+    'real person',
     'manager',
     'complaint',
-    'plainte',
-    'problème grave',
+    'serious problem',
+    'refund',
   ];
 }
 
@@ -160,27 +160,27 @@ function getDefinition(): object {
     intents: {
       'greeting': {
         description: 'Customer greeting or starting conversation',
-        examples: ['Bonjour', 'Hello', 'Hi', 'Salut'],
+        examples: ['Hello', 'Hi', 'Good morning', 'Hey there'],
       },
       'order.start': {
         description: 'Customer wants to start ordering',
-        examples: ['Je voudrais commander', 'I want to order', 'Je veux passer une commande'],
+        examples: ['I want to order', 'I would like to place an order', 'Can I order something'],
       },
       'order.add_items': {
         description: 'Customer wants to add items to order',
-        examples: ['Je veux un burger', 'Add a pizza', 'Je prends des frites'],
+        examples: ['I want a burger', 'Add a pizza', 'I will take some fries', 'Give me a salad'],
       },
       'menu.inquiry': {
         description: 'Customer asks about the menu',
-        examples: ['Qu\'est-ce que vous avez?', 'What do you have?', 'Le menu svp'],
+        examples: ['What do you have?', 'Show me the menu', 'What can I order?'],
       },
       'payment.request': {
         description: 'Customer is ready to pay',
-        examples: ['Je veux payer', 'Send me the payment link', 'Comment je paie?'],
+        examples: ['I want to pay', 'Send me the payment link', 'How do I pay?'],
       },
       'handoff': {
         description: 'Customer wants to speak with a human',
-        examples: ['Parler à quelqu\'un', 'Human please', 'Je veux un manager'],
+        examples: ['Talk to someone', 'Human please', 'I want a manager'],
       },
     },
   };
