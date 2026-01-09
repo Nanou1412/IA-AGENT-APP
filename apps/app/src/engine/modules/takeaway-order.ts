@@ -55,6 +55,7 @@ import {
 import { OrderEventType } from '@prisma/client';
 import { notifyBusinessOfOrder } from './takeaway-notifications';
 import { createOrderCheckoutSession } from '@/lib/stripe/orders';
+import { sendPaymentLinkSms } from '@/lib/sms';
 
 // ============================================================================
 // Types
@@ -530,6 +531,32 @@ async function handlePaymentRequired(
       },
     },
   });
+
+  // Send payment link via SMS (in addition to conversation response)
+  // This ensures customer receives the link even if they close the chat
+  const smsResult = await sendPaymentLinkSms({
+    orgId,
+    customerPhone: existingOrder.customerPhone,
+    orderId,
+    shortOrderId: shortId,
+    paymentUrl: checkoutResult.paymentUrl,
+    expiresMinutes: paymentConfig.expiresMinutes,
+  });
+
+  if (smsResult.success) {
+    await logOrderEvent(orderId, OrderEventType.payment_link_created, {
+      smsSent: true,
+      messageSid: smsResult.messageSid,
+    });
+  } else {
+    // Log failure but don't block - customer still gets link in conversation
+    console.warn(`[takeaway-order] Failed to send payment SMS for order ${orderId}:`, smsResult.error);
+    await logOrderEvent(orderId, OrderEventType.payment_link_created, {
+      smsSent: false,
+      smsError: smsResult.error,
+      blockedBy: smsResult.blockedBy,
+    });
+  }
 
   // Build payment message
   const paymentMessage = renderPaymentMessage(paymentConfig.messages.pending, {
