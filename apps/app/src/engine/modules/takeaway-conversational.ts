@@ -17,7 +17,7 @@
 import type { ModuleContext, ModuleResult } from '../module-runner';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus, OrderPaymentStatus } from '@prisma/client';
-import { getOpenAIProvider } from '../llm';
+import { getOpenAIProvider, createOpenAIProvider, ENGINE_CONFIG } from '../llm';
 import type { LLMMessage, LLMFunctionDef } from '@repo/core';
 import {
   parseTakeawayConfig,
@@ -492,8 +492,11 @@ export async function takeawayConversationalModule(
   // Get customer phone from session
   const customerPhone = sessionMetadata.customerPhone as string || '';
 
-  // Get LLM provider
-  const provider = getOpenAIProvider();
+  // Get LLM provider - use faster model for voice to stay under Twilio timeout
+  // Voice has 15s timeout, gpt-4o can take 10-15s, gpt-4o-mini is 2-4s
+  const provider = channel === 'voice' 
+    ? createOpenAIProvider({ defaultModel: ENGINE_CONFIG.lowCostModel })
+    : getOpenAIProvider();
 
   // Build messages for conversation
   const systemPrompt = buildConversationalPrompt(menuConfig, takeawayConfig, orderState);
