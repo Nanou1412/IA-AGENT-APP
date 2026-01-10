@@ -47,8 +47,8 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    // Fetch organization with settings and template
-    const org = await prisma.organization.findUnique({
+    // Fetch organization with settings
+    const org = await prisma.org.findUnique({
       where: { id: orgId },
       include: {
         settings: true,
@@ -63,14 +63,20 @@ export async function GET(req: NextRequest) {
     }
     
     // Fetch assigned template
-    const templateAssignment = await prisma.orgTemplateAssignment.findFirst({
-      where: { orgId },
+    const assignment = await prisma.agentAssignment.findFirst({
+      where: { 
+        orgId,
+        status: 'active',
+      },
       include: {
         template: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
     
-    const template = templateAssignment?.template;
+    const template = assignment?.template;
     
     // Fetch menu items from OrgSettings
     const settings = org.settings;
@@ -91,8 +97,8 @@ export async function GET(req: NextRequest) {
       systemPrompt = template.systemPrompt;
     }
     
-    // Get timezone from settings or default
-    const timezone = settings?.timezone || process.env.DEFAULT_TIMEZONE || 'Australia/Perth';
+    // Get timezone from org or default
+    const timezone = org.timezone || process.env.DEFAULT_TIMEZONE || 'Australia/Perth';
     
     // Build response
     const response: OrgConfigResponse = {

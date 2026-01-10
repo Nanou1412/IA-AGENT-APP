@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Verify organization exists
-    const org = await prisma.organization.findUnique({
+    const org = await prisma.org.findUnique({
       where: { id: body.orgId },
       include: { settings: true },
     });
@@ -67,27 +67,39 @@ export async function POST(req: NextRequest) {
       0
     );
     
-    // Generate order ID
-    const orderId = uuidv4();
+    // Generate order ID and idempotency key
+    const orderId = randomUUID();
+    const idempotencyKey = `realtime-${body.callSid || orderId}`;
+    
+    // Build order summary text
+    const summaryText = body.items
+      .map(item => `${item.quantity}x ${item.name}`)
+      .join(', ');
     
     // Create order in database
     const order = await prisma.order.create({
       data: {
         id: orderId,
         orgId: body.orgId,
-        status: 'PENDING',
+        channel: 'voice',
+        status: 'pending_confirmation',
         customerName: body.customerName,
-        customerPhone: body.customerPhone || null,
-        items: body.items,
-        subtotal: total,
-        total: total,
-        notes: body.specialInstructions || null,
-        pickupTime: body.pickupTime || null,
-        source: 'VOICE',
-        metadata: {
-          callSid: body.callSid,
-          submittedAt: new Date().toISOString(),
-          realtimeServer: true,
+        customerPhone: body.customerPhone || '',
+        pickupTime: body.pickupTime ? new Date(body.pickupTime) : null,
+        notes: body.specialInstructions,
+        totalItems: body.items.reduce((sum, item) => sum + item.quantity, 0),
+        summaryText,
+        idempotencyKey,
+        paymentRequired: org.settings?.requirePaymentBeforeOrder ?? false,
+        paymentStatus: 'pending',
+        paymentAmountCents: Math.round(total * 100),
+        items: {
+          create: body.items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            unitPriceCents: Math.round(item.price * 100),
+            notes: item.notes,
+          })),
         },
       },
     });
@@ -110,7 +122,7 @@ export async function POST(req: NextRequest) {
         success: true,
         orderId: order.id,
         message: 'Order created, payment required',
-        status: 'PENDING_PAYMENT',
+        status: 'pending_payment',
         // paymentUrl: stripePaymentUrl,
       });
     }
@@ -118,7 +130,7 @@ export async function POST(req: NextRequest) {
     // If no payment required, mark as confirmed
     await prisma.order.update({
       where: { id: orderId },
-      data: { status: 'CONFIRMED' },
+      data: { status: 'confirmed' },
     });
     
     // TODO: Send confirmation SMS to customer
@@ -128,7 +140,7 @@ export async function POST(req: NextRequest) {
       success: true,
       orderId: order.id,
       message: 'Order confirmed',
-      status: 'CONFIRMED',
+      status: 'confirmed',
       total,
     });
     
