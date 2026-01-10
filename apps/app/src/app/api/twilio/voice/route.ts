@@ -48,6 +48,28 @@ export const dynamic = 'force-dynamic';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL 
   || 'https://ia-agent-app-app.vercel.app';
 
+// Realtime server URL (if configured, uses ultra-low latency voice AI)
+const REALTIME_SERVER_URL = process.env.REALTIME_SERVER_URL || '';
+
+/**
+ * Check if realtime voice is configured
+ */
+function isRealtimeConfigured(): boolean {
+  return !!REALTIME_SERVER_URL;
+}
+
+/**
+ * Generate TwiML to redirect to Realtime server
+ */
+function generateRealtimeRedirectTwiML(orgId: string, callSid: string, from: string): string {
+  const twimlUrl = `${REALTIME_SERVER_URL}/twiml/start?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Redirect method="POST">${twimlUrl}</Redirect>
+</Response>`;
+}
+
 /**
  * Parse form-urlencoded body
  */
@@ -215,7 +237,21 @@ export async function POST(req: NextRequest) {
     }
     
     // === CALL ROUTING ===
-    // Phase 6: AI Engine for greeting, then queue or dial
+    
+    // Check if Realtime voice server is configured (ultra-low latency)
+    if (isRealtimeConfigured()) {
+      logWithContext('info', 'Using Realtime voice server', { orgId, CallSid });
+      
+      await logTwilioAudit('twilio.voice.realtime_redirect', {
+        callSid: CallSid,
+        realtimeServer: REALTIME_SERVER_URL,
+        processingTimeMs: Date.now() - startTime,
+      }, { orgId });
+      
+      return twimlResponse(generateRealtimeRedirectTwiML(orgId, CallSid, From));
+    }
+    
+    // Phase 6: AI Engine for greeting, then queue or dial (fallback mode)
     
     // Get greeting from AI Engine if configured
     let welcomeText = voiceConfig.callWelcomeText;

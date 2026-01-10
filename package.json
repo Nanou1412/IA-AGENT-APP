@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm run --parallel --filter=@repo/marketing --filter=@repo/app dev",
+    "dev:realtime": "pnpm --filter=@repo/realtime-server dev",
     "build": "pnpm run --recursive build",
     "lint": "pnpm run --recursive lint",
     "db:up": "docker compose up -d",
