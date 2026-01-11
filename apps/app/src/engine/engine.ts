@@ -14,27 +14,40 @@
  * 10. Return response
  * 
  * Phase 8: Uses canUseModuleWithKillSwitch for kill switch enforcement
+ * 
+ * Refactored: Session management → session-manager.ts
+ * Refactored: Run tracking → run-tracker.ts
+ * Refactored: Context loading → context-loader.ts
  */
 
 import { prisma } from '@/lib/prisma';
 import { 
   MessagingChannel, 
-  ConversationSessionStatus, 
-  ConversationTurnRole,
   EngineRunStatus,
 } from '@prisma/client';
 import type { LLMMessage } from '@repo/core';
 import { canUseModuleWithKillSwitch, type FeatureGateResult, type OrgContextWithIndustry } from '@/lib/feature-gating';
-import { getCachedOrgContext, getCachedTemplate } from '@/lib/cached-config';
 
-import { getOpenAIProvider, ENGINE_CONFIG, createOpenAIProvider } from './llm';
-import { createIntentRouter, DEFAULT_INTENTS, type RouteResult } from './intent-router';
+import { getOpenAIProvider, createOpenAIProvider } from './llm';
+import { createIntentRouter } from './intent-router';
 import { runModules, type ModuleContext } from './module-runner';
-import { applyInputPolicies, applyOutputPolicies, parseTemplateRules, getDefaultRules, type TemplateRules } from './policies';
+import { applyInputPolicies, applyOutputPolicies, parseTemplateRules, getDefaultRules } from './policies';
 import { adaptForChannel } from './adapters';
 import { checkRateLimit } from './rate-limiter';
-import { requireAiBudget, recordAiCost, CostLimitError, estimateCostFromTokens } from '@/lib/cost-tracker';
+import { requireAiBudget, recordAiCost, estimateCostFromTokens } from '@/lib/cost-tracker';
 import { parseTakeawayConfig } from '@/lib/takeaway/takeaway-config';
+
+// Refactored modules
+import { 
+  getOrCreateSession, 
+  loadConversationHistory, 
+  saveConversationTurn, 
+  getSessionMetadata, 
+  updateSessionMetadata,
+  normalizePhone 
+} from './session-manager';
+import { createEngineRun, logEngineAudit } from './run-tracker';
+import { loadEngineContext, type EngineContext } from './context-loader';
 
 // ============================================================================
 // Types
@@ -61,39 +74,8 @@ export interface EngineOutput {
   outputTokens?: number;
 }
 
-export interface EngineContext {
-  org: {
-    id: string;
-    name: string;
-    industry: string;
-    industryConfig?: {
-      id: string;
-      slug: string;
-      rulesJson: unknown;
-      modules: unknown;
-    } | null;
-  };
-  settings: {
-    id: string;
-    sandboxStatus: string;
-    billingStatus: string;
-    faqText?: string | null;
-    handoffPhone?: string | null;
-    handoffEmail?: string | null;
-    handoffSmsTo?: string | null;
-    handoffReplyText?: string | null;
-    aiModelOverride?: string | null;
-  };
-  template: {
-    id: string;
-    slug: string;
-    version: string;
-    systemPrompt: string;
-    intentsAllowed: unknown;
-    modulesDefault: unknown;
-    definition: unknown;
-  } | null;
-}
+// Re-export EngineContext from context-loader
+export type { EngineContext } from './context-loader';
 
 // ============================================================================
 // Constants
@@ -179,8 +161,8 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
     }
     
     // 3. Get or create session
-    const session = await getOrCreateSession(orgId, channel, contactKey, externalThreadKey);
-    sessionId = session.id;
+    const sessionResult = await getOrCreateSession(orgId, channel, contactKey, externalThreadKey);
+    sessionId = sessionResult.id;
     
     // 4. Load conversation history
     const conversationHistory = await loadConversationHistory(sessionId);
@@ -581,300 +563,5 @@ export async function handleInboundCallGreeting(
   } catch (error) {
     console.error('[engine] Error in voice greeting:', error);
     return { welcomeText: 'Thank you for calling. Please hold while we connect you.' };
-  }
-}
-
-// ============================================================================
-// Context Loading (with caching for performance)
-// ============================================================================
-
-async function loadEngineContext(orgId: string): Promise<EngineContext | null> {
-  try {
-    // Use cached org context (reduces ~3 DB queries to 1 on cache hit)
-    const cachedContext = await getCachedOrgContext(orgId);
-    
-    if (!cachedContext) {
-      console.error(`[engine] Org or settings not found: ${orgId}`);
-      return null;
-    }
-    
-    // Get cached template (reduces 1-2 DB queries on cache hit)
-    const template = await getCachedTemplate(orgId);
-    
-    return {
-      org: {
-        id: cachedContext.org.id,
-        name: cachedContext.org.name,
-        industry: cachedContext.org.industry,
-        industryConfig: cachedContext.industryConfig ? {
-          id: cachedContext.industryConfig.id,
-          slug: cachedContext.industryConfig.slug,
-          rulesJson: cachedContext.industryConfig.rulesJson,
-          modules: cachedContext.industryConfig.modules,
-        } : null,
-      },
-      settings: {
-        id: cachedContext.settings.id,
-        sandboxStatus: cachedContext.settings.sandboxStatus,
-        billingStatus: cachedContext.settings.billingStatus,
-        faqText: cachedContext.settings.faqText,
-        handoffPhone: cachedContext.settings.handoffPhone,
-        handoffEmail: cachedContext.settings.handoffEmail,
-        handoffSmsTo: cachedContext.settings.handoffSmsTo,
-        handoffReplyText: cachedContext.settings.handoffReplyText,
-        aiModelOverride: cachedContext.settings.aiModelOverride,
-      },
-      template: template ? {
-        id: template.id,
-        slug: template.slug,
-        version: template.version,
-        systemPrompt: template.systemPrompt,
-        intentsAllowed: template.intentsAllowed,
-        modulesDefault: template.modulesDefault,
-        definition: template.definition,
-      } : null,
-    };
-    
-  } catch (error) {
-    console.error('[engine] Error loading context:', error);
-    return null;
-  }
-}
-
-// ============================================================================
-// Session Management
-// ============================================================================
-
-async function getOrCreateSession(
-  orgId: string,
-  channel: MessagingChannel,
-  contactKey: string,
-  externalThreadKey?: string
-): Promise<{ id: string }> {
-  const normalizedContact = normalizePhone(contactKey);
-  
-  // Try to find existing active session
-  const existing = await prisma.conversationSession.findFirst({
-    where: {
-      orgId,
-      channel,
-      contactKey: normalizedContact,
-      status: ConversationSessionStatus.active,
-    },
-    select: { id: true },
-  });
-  
-  if (existing) {
-    // Update lastActiveAt
-    await prisma.conversationSession.update({
-      where: { id: existing.id },
-      data: { 
-        lastActiveAt: new Date(),
-        externalThreadKey: externalThreadKey || undefined,
-      },
-    });
-    return existing;
-  }
-  
-  // Create new session
-  const session = await prisma.conversationSession.create({
-    data: {
-      orgId,
-      channel,
-      contactKey: normalizedContact,
-      externalThreadKey,
-      status: ConversationSessionStatus.active,
-      lastActiveAt: new Date(),
-      metadata: {},
-    },
-    select: { id: true },
-  });
-  
-  return session;
-}
-
-async function loadConversationHistory(sessionId: string): Promise<LLMMessage[]> {
-  const turns = await prisma.conversationTurn.findMany({
-    where: { sessionId },
-    orderBy: { createdAt: 'asc' },
-    take: ENGINE_CONFIG.maxTurns,
-    select: {
-      role: true,
-      text: true,
-    },
-  });
-  
-  return turns.map(turn => ({
-    role: mapTurnRoleToLLM(turn.role),
-    content: turn.text,
-  }));
-}
-
-async function saveConversationTurn(
-  sessionId: string,
-  channel: MessagingChannel,
-  role: 'user' | 'assistant' | 'system' | 'tool',
-  text: string,
-  raw?: Record<string, unknown>
-): Promise<void> {
-  await prisma.conversationTurn.create({
-    data: {
-      sessionId,
-      role: role as ConversationTurnRole,
-      channel,
-      text,
-      raw: (raw || {}) as object,
-    },
-  });
-}
-
-async function getSessionMetadata(sessionId: string): Promise<Record<string, unknown> | null> {
-  const session = await prisma.conversationSession.findUnique({
-    where: { id: sessionId },
-    select: { metadata: true },
-  });
-  
-  if (!session?.metadata || typeof session.metadata !== 'object') {
-    return null;
-  }
-  
-  return session.metadata as Record<string, unknown>;
-}
-
-async function updateSessionMetadata(
-  sessionId: string,
-  updates: Record<string, unknown>
-): Promise<void> {
-  const current = await getSessionMetadata(sessionId) || {};
-  
-  await prisma.conversationSession.update({
-    where: { id: sessionId },
-    data: {
-      metadata: { ...current, ...updates } as object,
-    },
-  });
-}
-
-// ============================================================================
-// Engine Run Logging
-// ============================================================================
-
-interface CreateEngineRunInput {
-  orgId?: string;           // Phase 8: Added for rate limiting
-  sessionId: string;
-  agentTemplateId?: string;
-  industryConfigId?: string;
-  status: EngineRunStatus;
-  decision?: Record<string, unknown>;
-  modelUsed: string;
-  inputTokens?: number;
-  outputTokens?: number;
-  costUsd?: number;
-  blockedBy?: string;
-  errorMessage?: string;
-  durationMs?: number;
-}
-
-async function createEngineRun(input: CreateEngineRunInput): Promise<{ id: string }> {
-  // If no session, create a dummy one for logging
-  let sessionId = input.sessionId;
-  
-  if (!sessionId) {
-    // Create a placeholder session for orphan runs
-    const placeholder = await prisma.conversationSession.create({
-      data: {
-        orgId: 'system',
-        channel: 'sms',
-        contactKey: 'unknown',
-        status: ConversationSessionStatus.closed,
-        metadata: { orphanRun: true } as object,
-      },
-      select: { id: true },
-    });
-    sessionId = placeholder.id;
-  }
-  
-  const run = await prisma.engineRun.create({
-    data: {
-      orgId: input.orgId,           // Phase 8: For rate limiting queries
-      sessionId,
-      agentTemplateId: input.agentTemplateId,
-      industryConfigId: input.industryConfigId,
-      status: input.status,
-      decision: (input.decision || {}) as object,
-      modelUsed: input.modelUsed,
-      inputTokens: input.inputTokens,
-      outputTokens: input.outputTokens,
-      costUsd: input.costUsd,
-      blockedBy: input.blockedBy,
-      errorMessage: input.errorMessage,
-      durationMs: input.durationMs,
-    },
-    select: { id: true },
-  });
-  
-  return run;
-}
-
-// ============================================================================
-// Audit Logging
-// ============================================================================
-
-async function logEngineAudit(
-  action: string,
-  details: Record<string, unknown>,
-  context?: { orgId?: string; sessionId?: string }
-): Promise<void> {
-  try {
-    await prisma.auditLog.create({
-      data: {
-        orgId: context?.orgId || null,
-        actorUserId: 'system',
-        action,
-        details: {
-          ...details,
-          sessionId: context?.sessionId,
-          timestamp: new Date().toISOString(),
-        },
-      },
-    });
-  } catch (error) {
-    console.error('[engine] Failed to log audit:', error);
-  }
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function normalizePhone(phone: string): string {
-  // Remove non-digits except leading +
-  let normalized = phone.replace(/[^\d+]/g, '');
-  
-  // Handle Australian numbers
-  if (normalized.startsWith('0') && normalized.length === 10) {
-    normalized = '+61' + normalized.slice(1);
-  }
-  
-  // Ensure + prefix for international
-  if (!normalized.startsWith('+') && normalized.length > 10) {
-    normalized = '+' + normalized;
-  }
-  
-  return normalized;
-}
-
-function mapTurnRoleToLLM(role: ConversationTurnRole): 'system' | 'user' | 'assistant' | 'tool' {
-  switch (role) {
-    case 'system':
-      return 'system';
-    case 'user':
-      return 'user';
-    case 'assistant':
-      return 'assistant';
-    case 'tool':
-      return 'tool';
-    default:
-      return 'user';
   }
 }

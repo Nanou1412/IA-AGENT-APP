@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../utils/logger.js';
 import { ServerConfig } from '../config.js';
 import { OpenAIRealtimeClient } from './openai-client.js';
+import { appApiClient } from './app-api-client.js';
 import type { RealtimeTool } from '../types/openai-realtime.js';
 import type { TwilioSessionContext } from '../types/twilio.js';
 import WebSocket from 'ws';
@@ -505,7 +506,7 @@ ${orgConfig.systemPrompt || ''}`;
   }
   
   private async handleConfirmOrder(session: VoiceSession): Promise<string> {
-    const { items, customerName } = session.orderState;
+    const { items, customerName, customerPhone, pickupTime, specialInstructions } = session.orderState;
     
     if (items.length === 0) {
       return JSON.stringify({
@@ -521,21 +522,52 @@ ${orgConfig.systemPrompt || ''}`;
       });
     }
     
-    // TODO: Send order to main app via API
-    // For now, just mark as confirmed
+    const totalAmount = this.calculateOrderTotal(session);
     
-    log.info('Order confirmed', {
+    // Submit order to main app via API
+    const result = await appApiClient.submitOrder({
+      orgId: session.twilioContext.orgId,
+      sessionId: session.id,
+      customerName,
+      customerPhone: customerPhone || session.twilioContext.from,
+      items: items.map(item => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        notes: item.notes,
+      })),
+      pickupTime: pickupTime || undefined,
+      specialInstructions: specialInstructions || undefined,
+      totalAmount,
+      channel: 'voice',
+    });
+    
+    if (!result.success) {
+      log.error('Order submission failed', {
+        sessionId: session.id,
+        error: result.error,
+      });
+      
+      return JSON.stringify({
+        success: false,
+        message: 'Sorry, there was a problem submitting your order. Please try again.',
+      });
+    }
+    
+    log.info('Order confirmed and submitted', {
       sessionId: session.id,
       orgId: session.twilioContext.orgId,
+      orderId: result.orderId,
       customerName,
       items: items.map(i => ({ name: i.name, qty: i.quantity })),
-      total: this.calculateOrderTotal(session),
+      total: totalAmount,
     });
     
     return JSON.stringify({
       success: true,
-      message: `Order confirmed for ${customerName}. Total: $${this.calculateOrderTotal(session).toFixed(2)}`,
-      orderId: session.id,
+      message: `Order confirmed for ${customerName}. Total: $${totalAmount.toFixed(2)}. Your order ID is ${result.orderId?.slice(-6).toUpperCase() || 'pending'}.`,
+      orderId: result.orderId,
     });
   }
   
