@@ -5,39 +5,32 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Copy the realtime-server files only
+COPY apps/realtime-server/package.json ./
 
-# Copy the entire monorepo structure needed
-COPY pnpm-workspace.yaml ./
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-COPY apps/realtime-server ./apps/realtime-server
+# Install dependencies
+RUN npm install
 
-# Install dependencies for realtime-server only
-WORKDIR /app/apps/realtime-server
-RUN pnpm install --frozen-lockfile
+# Copy source code
+COPY apps/realtime-server/src ./src
+COPY apps/realtime-server/tsconfig.json ./
 
 # Build TypeScript
-RUN pnpm build
+RUN npm run build
 
 # Production image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy package files
-COPY --from=builder /app/apps/realtime-server/package.json ./
-COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/package.json ./
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile || npm install --omit=dev
+RUN npm install --omit=dev
 
 # Copy built files
-COPY --from=builder /app/apps/realtime-server/dist ./dist
+COPY --from=builder /app/dist ./dist
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

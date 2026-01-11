@@ -5,34 +5,28 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (npm is more reliable for standalone packages)
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build TypeScript
-RUN pnpm build
+RUN npm run build
 
 # Production image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json ./
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+RUN npm install --omit=dev
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
