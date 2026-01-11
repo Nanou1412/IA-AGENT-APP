@@ -157,8 +157,11 @@ async function main(): Promise<void> {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
     
-  } catch (error) {
-    log.error('Failed to start server', { error });
+  } catch (err) {
+    const e = err instanceof Error
+      ? { message: err.message, stack: err.stack }
+      : { err };
+    log.error('Failed to start server', { error: e });
     process.exit(1);
   }
 }
