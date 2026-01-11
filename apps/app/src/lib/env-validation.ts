@@ -248,6 +248,14 @@ export function requireValidEnvironment(): void {
   const result = validateEnvironment();
   const isProd = process.env.NODE_ENV === 'production';
   
+  // SECURITY: Block dev credentials in production
+  if (isProd && process.env.AUTH_DEV_CREDENTIALS === 'true') {
+    throw new Error(
+      'SECURITY VIOLATION: AUTH_DEV_CREDENTIALS=true is not allowed in production. ' +
+      'Set AUTH_DEV_CREDENTIALS=false or remove it from your environment.'
+    );
+  }
+  
   // Log warnings
   if (result.warnings.length > 0) {
     console.warn('[env-validation] Warnings:');

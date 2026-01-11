@@ -1,5 +1,7 @@
 /**
  * Test endpoint to diagnose engine issues
+ * 
+ * SECURITY: This endpoint is disabled in production.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { handleInboundMessage, type EngineInput } from '@/engine';
@@ -7,6 +9,14 @@ import { handleInboundMessage, type EngineInput } from '@/engine';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  // Block access in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'This endpoint is not available in production' },
+      { status: 404 }
+    );
+  }
+  
   try {
     const body = await req.json();
     
