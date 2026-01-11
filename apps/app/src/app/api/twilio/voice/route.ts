@@ -38,6 +38,7 @@ import { canUseModuleWithKillSwitch } from '@/lib/feature-gating';
 import { handleInboundCallGreeting, isOpenAIConfigured } from '@/engine';
 import { withRequestContext, getCorrelationId, logWithContext, generateCorrelationId } from '@/lib/correlation';
 import { increment, METRIC_NAMES, recordTwilioVoice } from '@/lib/metrics';
+import { parseFormBody } from '@/lib/twilio-webhook-utils';
 
 // Disable body parsing - we handle form-urlencoded
 export const dynamic = 'force-dynamic';
@@ -68,23 +69,6 @@ function generateRealtimeRedirectTwiML(orgId: string, callSid: string, from: str
 <Response>
   <Redirect method="POST">${twimlUrl}</Redirect>
 </Response>`;
-}
-
-/**
- * Parse form-urlencoded body
- */
-async function parseFormBody(req: NextRequest): Promise<Record<string, string>> {
-  const text = await req.text();
-  const params: Record<string, string> = {};
-  
-  for (const pair of text.split('&')) {
-    const [key, value] = pair.split('=');
-    if (key && value !== undefined) {
-      params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ' '));
-    }
-  }
-  
-  return params;
 }
 
 /**

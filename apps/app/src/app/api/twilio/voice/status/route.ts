@@ -14,25 +14,9 @@ import {
 } from '@/lib/twilio-voice';
 import { logTwilioAudit } from '@/lib/twilio-helpers';
 import { prisma } from '@/lib/prisma';
+import { parseFormBody } from '@/lib/twilio-webhook-utils';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Parse form-urlencoded body
- */
-async function parseFormBody(req: NextRequest): Promise<Record<string, string>> {
-  const text = await req.text();
-  const params: Record<string, string> = {};
-  
-  for (const pair of text.split('&')) {
-    const [key, value] = pair.split('=');
-    if (key && value !== undefined) {
-      params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ' '));
-    }
-  }
-  
-  return params;
-}
 
 export async function POST(req: NextRequest) {
   try {

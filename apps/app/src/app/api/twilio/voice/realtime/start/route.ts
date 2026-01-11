@@ -26,28 +26,12 @@ import {
   DEFAULT_CALL_DENY_TEXT,
   generateDeniedCallTwiML,
 } from '@/lib/twilio-voice';
+import { parseFormBody } from '@/lib/twilio-webhook-utils';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://ia-agent-app-app.vercel.app';
-
-/**
- * Parse form-urlencoded body
- */
-async function parseFormBody(req: NextRequest): Promise<Record<string, string>> {
-  const text = await req.text();
-  const params: Record<string, string> = {};
-  
-  for (const pair of text.split('&')) {
-    const [key, value] = pair.split('=');
-    if (key && value !== undefined) {
-      params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ' '));
-    }
-  }
-  
-  return params;
-}
 
 /**
  * Return TwiML response

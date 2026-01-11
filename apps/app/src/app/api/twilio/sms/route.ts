@@ -37,28 +37,12 @@ import { checkAbuse, handleAbuse, isSessionBlocked } from '@/lib/abuse';
 import { checkRateLimit } from '@/engine/rate-limiter';
 import { checkFeature, FeatureFlag } from '@/lib/feature-flags';
 import { increment, METRIC_NAMES, recordTwilioSms } from '@/lib/metrics';
+import { parseFormBody } from '@/lib/twilio-webhook-utils';
 
 // Disable body parsing - we need to handle form-urlencoded
 export const dynamic = 'force-dynamic';
 
 const CHANNEL: MessagingChannel = 'sms';
-
-/**
- * Parse form-urlencoded body
- */
-async function parseFormBody(req: NextRequest): Promise<Record<string, string>> {
-  const text = await req.text();
-  const params: Record<string, string> = {};
-  
-  for (const pair of text.split('&')) {
-    const [key, value] = pair.split('=');
-    if (key && value !== undefined) {
-      params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ' '));
-    }
-  }
-  
-  return params;
-}
 
 export async function POST(req: NextRequest) {
   const correlationId = generateCorrelationId();
