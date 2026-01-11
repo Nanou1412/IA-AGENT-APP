@@ -1,11 +1,14 @@
 /**
  * Rate Limiter - Controls engine invocation frequency per org
  * 
- * Uses in-memory LRU cache for development.
- * In production, should be backed by Redis or database.
+ * PRODUCTION HARDENING:
+ * - Uses Redis (Upstash) for distributed rate limiting in production
+ * - Falls back to in-memory only in development
+ * - DB-based counting available as secondary verification
  */
 
 import { ENGINE_CONFIG } from './llm';
+import { cacheGet, cacheSet, isCacheConfigured } from '@/lib/cache';
 
 // ============================================================================
 // Types
@@ -70,15 +73,86 @@ function touchEntry(key: string): void {
 }
 
 // ============================================================================
-// Rate Limiter
+// Rate Limiter (with Redis support)
 // ============================================================================
 
 /**
- * Check and record a rate limit attempt
+ * Redis-based rate limit check
+ * Uses sliding window counter pattern
  */
-export function checkRateLimit(
+async function checkRedisRateLimit(
   orgId: string,
-  limitPerMinute: number = ENGINE_CONFIG.rateLimitPerMinute
+  limitPerMinute: number
+): Promise<RateLimitResult> {
+  const key = `ratelimit:${orgId}`;
+  const now = Date.now();
+  
+  try {
+    // Get current count from Redis
+    const cached = await cacheGet<{ count: number; windowStart: number }>(key);
+    
+    if (cached) {
+      const windowAge = now - cached.windowStart;
+      
+      // If window has expired, start fresh
+      if (windowAge >= WINDOW_MS) {
+        await cacheSet(key, { count: 1, windowStart: now }, 120); // 2 min TTL for safety
+        return {
+          allowed: true,
+          remainingRequests: limitPerMinute - 1,
+          resetInMs: WINDOW_MS,
+        };
+      }
+      
+      // Check if limit exceeded
+      if (cached.count >= limitPerMinute) {
+        return {
+          allowed: false,
+          remainingRequests: 0,
+          resetInMs: WINDOW_MS - windowAge,
+          reason: `Rate limit exceeded: ${cached.count}/${limitPerMinute} requests per minute`,
+        };
+      }
+      
+      // Increment count
+      await cacheSet(key, { count: cached.count + 1, windowStart: cached.windowStart }, 120);
+      return {
+        allowed: true,
+        remainingRequests: limitPerMinute - cached.count - 1,
+        resetInMs: WINDOW_MS - windowAge,
+      };
+    }
+    
+    // No existing entry, create new
+    await cacheSet(key, { count: 1, windowStart: now }, 120);
+    return {
+      allowed: true,
+      remainingRequests: limitPerMinute - 1,
+      resetInMs: WINDOW_MS,
+    };
+  } catch (error) {
+    console.error('[rate-limiter] Redis error, falling back to in-memory:', error);
+    // On Redis error, fall back to in-memory (only in non-prod)
+    if (process.env.NODE_ENV === 'production') {
+      // In production, fail open but log
+      console.warn('[rate-limiter] Redis unavailable in production, allowing request');
+      return {
+        allowed: true,
+        remainingRequests: -1,
+        resetInMs: WINDOW_MS,
+        reason: 'Redis unavailable, fail-open mode',
+      };
+    }
+    return checkMemoryRateLimit(orgId, limitPerMinute);
+  }
+}
+
+/**
+ * In-memory rate limit check (development only)
+ */
+function checkMemoryRateLimit(
+  orgId: string,
+  limitPerMinute: number
 ): RateLimitResult {
   const now = Date.now();
   const cutoff = now - WINDOW_MS;
@@ -106,7 +180,6 @@ export function checkRateLimit(
   const currentCount = entry.timestamps.length;
   
   if (currentCount >= limitPerMinute) {
-    // Calculate reset time
     const oldestTimestamp = entry.timestamps[0] || now;
     const resetInMs = (oldestTimestamp + WINDOW_MS) - now;
     
@@ -118,7 +191,6 @@ export function checkRateLimit(
     };
   }
   
-  // Record this request
   entry.timestamps.push(now);
   
   return {
@@ -126,6 +198,28 @@ export function checkRateLimit(
     remainingRequests: limitPerMinute - entry.timestamps.length,
     resetInMs: WINDOW_MS,
   };
+}
+
+/**
+ * Check and record a rate limit attempt
+ * Uses Redis in production, in-memory in development
+ */
+export async function checkRateLimit(
+  orgId: string,
+  limitPerMinute: number = ENGINE_CONFIG.rateLimitPerMinute
+): Promise<RateLimitResult> {
+  // Use Redis if configured
+  if (isCacheConfigured()) {
+    return checkRedisRateLimit(orgId, limitPerMinute);
+  }
+  
+  // In production without Redis, warn and fail open
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('[rate-limiter] No Redis configured in production!');
+  }
+  
+  // Development: use in-memory
+  return checkMemoryRateLimit(orgId, limitPerMinute);
 }
 
 /**

@@ -2,12 +2,16 @@
  * Cache Layer for Performance Optimization
  * 
  * Uses Upstash Redis for serverless caching.
- * Falls back to in-memory cache if Redis is not configured.
+ * 
+ * PRODUCTION HARDENING:
+ * - In-memory fallback is DISABLED in production
+ * - Redis is REQUIRED for production deployments
+ * - In development, in-memory fallback is allowed for convenience
  * 
  * Primary use cases:
  * - Org settings (menu, takeaway config, templates)
  * - Voice configurations
- * - Rate limiting (future)
+ * - Rate limiting
  */
 
 // ============================================================================
@@ -121,7 +125,7 @@ function getRedisClient() {
 }
 
 // ============================================================================
-// In-Memory Fallback Cache
+// In-Memory Fallback Cache (DEVELOPMENT ONLY)
 // ============================================================================
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
@@ -136,6 +140,27 @@ if (typeof setInterval !== 'undefined') {
       }
     }
   }, 60000);
+}
+
+/**
+ * Check if in-memory fallback is allowed
+ * PRODUCTION: Never allowed - Redis is required
+ * DEVELOPMENT: Allowed for convenience
+ */
+function isMemoryFallbackAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production';
+}
+
+/**
+ * Require Redis in production - throws if not configured
+ */
+export function requireRedisInProduction(): void {
+  if (process.env.NODE_ENV === 'production' && !isCacheConfigured()) {
+    throw new Error(
+      'Redis (Upstash) is REQUIRED in production. ' +
+      'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables.'
+    );
+  }
 }
 
 // ============================================================================
@@ -158,6 +183,7 @@ function buildKey(key: string): string {
 
 /**
  * Get a value from cache
+ * In production, returns null if Redis is not available (no in-memory fallback)
  */
 export async function cacheGet<T>(key: string): Promise<T | null> {
   const fullKey = buildKey(key);
@@ -171,7 +197,12 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     }
   }
 
-  // Fallback to memory cache
+  // In production, DO NOT use memory fallback
+  if (!isMemoryFallbackAllowed()) {
+    return null;
+  }
+
+  // Development only: Fallback to memory cache
   const entry = memoryCache.get(fullKey) as CacheEntry<T> | undefined;
   if (entry && entry.expiresAt > Date.now()) {
     return entry.data;
@@ -187,6 +218,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 
 /**
  * Set a value in cache
+ * In production, only Redis is used (no in-memory fallback)
  */
 export async function cacheSet<T>(key: string, value: T, ttlSeconds: number = CACHE_CONFIG.defaultTtlSeconds): Promise<void> {
   const fullKey = buildKey(key);
@@ -197,11 +229,13 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number = CA
     await redis.set(fullKey, value, ttlSeconds);
   }
 
-  // Also store in memory cache for faster local access
-  memoryCache.set(fullKey, {
-    data: value,
-    expiresAt: Date.now() + (ttlSeconds * 1000),
-  });
+  // Development only: Also store in memory cache for faster local access
+  if (isMemoryFallbackAllowed()) {
+    memoryCache.set(fullKey, {
+      data: value,
+      expiresAt: Date.now() + (ttlSeconds * 1000),
+    });
+  }
 }
 
 /**

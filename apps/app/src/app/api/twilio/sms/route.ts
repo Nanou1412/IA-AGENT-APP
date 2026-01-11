@@ -152,9 +152,9 @@ export async function POST(req: NextRequest) {
     }
     
     // ========================================================================
-    // PHASE 8: Rate Limit Check (BLOQUANT 3)
+    // PHASE 8: Rate Limit Check (Redis-backed in production)
     // ========================================================================
-    const rateLimitResult = checkRateLimit(orgId);
+    const rateLimitResult = await checkRateLimit(orgId);
     if (!rateLimitResult.allowed) {
       logWithContext('warn', 'Rate limit exceeded', { orgId, reason: rateLimitResult.reason });
       await logTwilioAudit('twilio.message.rate_limited', {

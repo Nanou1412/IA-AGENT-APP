@@ -2,17 +2,60 @@
  * Stripe Client Configuration
  * 
  * Centralized Stripe SDK initialization for server-side usage.
+ * 
+ * PRODUCTION HARDENING:
+ * - Validates Stripe key format at initialization
+ * - Throws immediately in production if key is invalid/placeholder
+ * - Currency is AUD (Australian market only)
  */
 
 import Stripe from 'stripe';
 
-// Validate required environment variables
+// ============================================================================
+// Stripe Key Validation
+// ============================================================================
+
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
-// Note: Don't throw during build time - Next.js runs this during page collection
-// The actual runtime check happens in the API routes
-if (!stripeSecretKey && process.env.NODE_ENV === 'production' && !process.env.NEXT_PHASE) {
-  console.warn('Warning: STRIPE_SECRET_KEY is not set in production');
+/**
+ * Validate Stripe secret key format
+ */
+function validateStripeKey(key: string | undefined): boolean {
+  if (!key) return false;
+  // Valid Stripe secret keys start with sk_live_ or sk_test_
+  return key.startsWith('sk_live_') || key.startsWith('sk_test_');
+}
+
+/**
+ * Get validated Stripe secret key
+ * In production: throws if key is missing or invalid
+ * In development: returns placeholder for build time only
+ */
+function getStripeSecretKey(): string {
+  const isProd = process.env.NODE_ENV === 'production';
+  const isBuildPhase = !!process.env.NEXT_PHASE;
+  
+  // During build phase, allow placeholder
+  if (isBuildPhase) {
+    return stripeSecretKey || 'sk_test_build_placeholder';
+  }
+  
+  // In production runtime, validate strictly
+  if (isProd) {
+    if (!stripeSecretKey) {
+      throw new Error('STRIPE_SECRET_KEY is required in production');
+    }
+    if (!validateStripeKey(stripeSecretKey)) {
+      throw new Error('STRIPE_SECRET_KEY has invalid format. Must start with sk_live_ or sk_test_');
+    }
+    // Warn if using test key in production
+    if (stripeSecretKey.startsWith('sk_test_')) {
+      console.warn('[stripe] WARNING: Using TEST key in production environment');
+    }
+  }
+  
+  // Development: allow any key or placeholder
+  return stripeSecretKey || 'sk_test_placeholder';
 }
 
 /**
@@ -22,7 +65,7 @@ if (!stripeSecretKey && process.env.NODE_ENV === 'production' && !process.env.NE
  *   import { stripe } from '@/lib/stripe';
  *   const customer = await stripe.customers.create({ email: 'test@example.com' });
  */
-export const stripe = new Stripe(stripeSecretKey || 'sk_test_placeholder', {
+export const stripe = new Stripe(getStripeSecretKey(), {
   apiVersion: '2025-12-15.clover',
   typescript: true,
   appInfo: {
@@ -32,16 +75,22 @@ export const stripe = new Stripe(stripeSecretKey || 'sk_test_placeholder', {
 });
 
 // ============================================================================
-// Stripe Price IDs
+// Pricing Configuration (Australian Market)
 // ============================================================================
 
 /**
- * Price ID for the one-time setup fee
+ * Default currency for all Stripe operations
+ * AUSTRALIA ONLY - All prices in AUD
+ */
+export const STRIPE_CURRENCY = 'aud' as const;
+
+/**
+ * Price ID for the one-time setup fee (390 AUD)
  */
 export const STRIPE_SETUP_FEE_PRICE_ID = process.env.STRIPE_SETUP_FEE_PRICE_ID || '';
 
 /**
- * Price ID for the weekly recurring subscription
+ * Price ID for the weekly recurring subscription (69.90 AUD)
  */
 export const STRIPE_WEEKLY_SUBSCRIPTION_PRICE_ID = process.env.STRIPE_WEEKLY_SUBSCRIPTION_PRICE_ID || '';
 

@@ -129,8 +129,8 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
   let sessionId = '';
   
   try {
-    // 1. Rate limit check
-    const rateLimitResult = checkRateLimit(orgId);
+    // 1. Rate limit check (Redis-backed in production)
+    const rateLimitResult = await checkRateLimit(orgId);
     
     if (!rateLimitResult.allowed) {
       const run = await createEngineRun({

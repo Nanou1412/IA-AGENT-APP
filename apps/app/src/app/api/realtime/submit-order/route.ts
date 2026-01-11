@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomUUID } from 'crypto';
+import { parseTakeawayPaymentConfig } from '@/lib/takeaway/takeaway-payment-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,13 +77,17 @@ export async function POST(req: NextRequest) {
       .map(item => `${item.quantity}x ${item.name}`)
       .join(', ');
     
+    // Parse payment config to determine if payment is required
+    const paymentConfig = parseTakeawayPaymentConfig(org.settings?.takeawayPaymentConfig);
+    const requirePayment = paymentConfig.enabled && paymentConfig.requiredByDefault;
+    
     // Create order in database
     const order = await prisma.order.create({
       data: {
         id: orderId,
         orgId: body.orgId,
         channel: 'voice',
-        status: 'pending_confirmation',
+        status: requirePayment ? 'pending_payment' : 'pending_confirmation',
         customerName: body.customerName,
         customerPhone: body.customerPhone || '',
         pickupTime: body.pickupTime ? new Date(body.pickupTime) : null,
@@ -90,14 +95,13 @@ export async function POST(req: NextRequest) {
         totalItems: body.items.reduce((sum, item) => sum + item.quantity, 0),
         summaryText,
         idempotencyKey,
-        paymentRequired: org.settings?.requirePaymentBeforeOrder ?? false,
-        paymentStatus: 'pending',
+        paymentRequired: requirePayment,
+        paymentStatus: requirePayment ? 'pending' : 'not_required',
         paymentAmountCents: Math.round(total * 100),
         items: {
           create: body.items.map(item => ({
             name: item.name,
             quantity: item.quantity,
-            unitPriceCents: Math.round(item.price * 100),
             notes: item.notes,
           })),
         },
@@ -111,9 +115,6 @@ export async function POST(req: NextRequest) {
       total,
       itemCount: body.items.length,
     });
-    
-    // Check if payment is required
-    const requirePayment = org.settings?.requirePaymentBeforeOrder ?? false;
     
     if (requirePayment && process.env.STRIPE_ORDER_PAYMENTS_ENABLED === 'true') {
       // TODO: Generate Stripe payment link

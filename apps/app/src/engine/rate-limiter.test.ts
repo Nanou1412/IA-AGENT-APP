@@ -1,5 +1,7 @@
 /**
  * Rate Limiter Tests
+ * 
+ * These tests run against the in-memory implementation (no Redis in test env)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -16,45 +18,45 @@ describe('Rate Limiter', () => {
   });
 
   describe('checkRateLimit', () => {
-    it('should allow first request', () => {
-      const result = checkRateLimit('org-1', 10);
+    it('should allow first request', async () => {
+      const result = await checkRateLimit('org-1', 10);
       expect(result.allowed).toBe(true);
       expect(result.remainingRequests).toBe(9);
     });
 
-    it('should track multiple requests', () => {
+    it('should track multiple requests', async () => {
       for (let i = 0; i < 5; i++) {
-        checkRateLimit('org-2', 10);
+        await checkRateLimit('org-2', 10);
       }
       
       const status = getRateLimitStatus('org-2', 10);
       expect(status.remainingRequests).toBe(5);
     });
 
-    it('should block when limit exceeded', () => {
+    it('should block when limit exceeded', async () => {
       const limit = 5;
       
       // Use up all requests
       for (let i = 0; i < limit; i++) {
-        const result = checkRateLimit('org-3', limit);
+        const result = await checkRateLimit('org-3', limit);
         expect(result.allowed).toBe(true);
       }
       
       // Next request should be blocked
-      const blocked = checkRateLimit('org-3', limit);
+      const blocked = await checkRateLimit('org-3', limit);
       expect(blocked.allowed).toBe(false);
       expect(blocked.remainingRequests).toBe(0);
       expect(blocked.reason).toContain('Rate limit exceeded');
     });
 
-    it('should track different orgs separately', () => {
+    it('should track different orgs separately', async () => {
       // Exhaust org-4
       for (let i = 0; i < 3; i++) {
-        checkRateLimit('org-4', 3);
+        await checkRateLimit('org-4', 3);
       }
       
       // org-5 should still be allowed
-      const result = checkRateLimit('org-5', 3);
+      const result = await checkRateLimit('org-5', 3);
       expect(result.allowed).toBe(true);
     });
   });
@@ -79,10 +81,10 @@ describe('Rate Limiter', () => {
   });
 
   describe('resetRateLimit', () => {
-    it('should reset limit for specific org', () => {
+    it('should reset limit for specific org', async () => {
       // Use some requests
       for (let i = 0; i < 5; i++) {
-        checkRateLimit('org-7', 10);
+        await checkRateLimit('org-7', 10);
       }
       
       expect(getRateLimitStatus('org-7', 10).remainingRequests).toBe(5);
@@ -93,9 +95,9 @@ describe('Rate Limiter', () => {
       expect(getRateLimitStatus('org-7', 10).remainingRequests).toBe(10);
     });
 
-    it('should not affect other orgs', () => {
-      checkRateLimit('org-8', 10);
-      checkRateLimit('org-9', 10);
+    it('should not affect other orgs', async () => {
+      await checkRateLimit('org-8', 10);
+      await checkRateLimit('org-9', 10);
       
       resetRateLimit('org-8');
       
@@ -105,10 +107,10 @@ describe('Rate Limiter', () => {
   });
 
   describe('clearAllRateLimits', () => {
-    it('should clear all tracked orgs', () => {
-      checkRateLimit('org-10', 10);
-      checkRateLimit('org-11', 10);
-      checkRateLimit('org-12', 10);
+    it('should clear all tracked orgs', async () => {
+      await checkRateLimit('org-10', 10);
+      await checkRateLimit('org-11', 10);
+      await checkRateLimit('org-12', 10);
       
       clearAllRateLimits();
       
