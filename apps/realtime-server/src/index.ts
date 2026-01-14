@@ -73,21 +73,25 @@ async function main(): Promise<void> {
     // TwiML endpoint - returns TwiML to start Media Stream
     // SECURITY (F-005): Requires signed token instead of raw orgId
     app.post('/twiml/start', async (req, res) => {
-      const token = (req.query.token as string) || '';
+      // Read token from: query param, body, or header (in priority order)
+      const token = (req.query.token as string) 
+        || (req.body.token as string) 
+        || (req.headers['x-internal-token'] as string) 
+        || '';
       const callSid = req.body.CallSid || '';
       const from = req.body.From || '';
       
       // SECURITY: Verify token to extract orgId
       if (!token) {
-        log.error('Missing token in TwiML request');
-        res.status(401).send('Unauthorized: Missing token');
+        log.warn('TwiML request rejected: Missing token');
+        res.status(401).json({ error: 'Missing token' });
         return;
       }
       
       const tokenResult = verifyInternalToken(token, config.internalApiKey);
       if (!tokenResult.ok) {
-        log.error('Invalid token in TwiML request', { error: tokenResult.error });
-        res.status(401).send(`Unauthorized: ${tokenResult.error}`);
+        log.warn('TwiML request rejected: Invalid token', { error: tokenResult.error });
+        res.status(401).json({ error: 'Invalid token', detail: tokenResult.error });
         return;
       }
       
