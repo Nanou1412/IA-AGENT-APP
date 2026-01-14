@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui';
 import { APP_URL } from '@/lib/config';
 
@@ -19,8 +18,6 @@ export function GetStartedButton({
   size = 'lg',
   className,
 }: GetStartedButtonProps) {
-  const router = useRouter();
-
   const handleClick = () => {
     // Set cookie (expires in 30 days)
     const expires = new Date();

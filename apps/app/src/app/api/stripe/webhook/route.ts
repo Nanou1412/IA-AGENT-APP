@@ -30,7 +30,7 @@ import {
 } from '@/lib/billing-helpers';
 import { withRequestContext, generateCorrelationId, logWithContext, getCorrelationId } from '@/lib/correlation';
 import { increment, METRIC_NAMES } from '@/lib/metrics';
-import { alertStripePaymentFailure, alertCriticalError, alertSubscriptionCanceled } from '@/lib/alerts';
+import { alertStripePaymentFailure, alertSubscriptionCanceled } from '@/lib/alerts';
 import { sendOrderConfirmationSms } from '@/lib/sms';
 import { getShortOrderId, formatPickupTime } from '@/lib/takeaway/order-manager';
 import { notifyBusinessOfOrder } from '@/engine/modules/takeaway-notifications';
@@ -563,8 +563,6 @@ async function handleOrderCheckoutCompleted(
   stripeEventId: string
 ): Promise<void> {
   const orderId = checkoutSession.metadata?.orderId;
-  const sessionId = checkoutSession.metadata?.sessionId;
-  
   if (!orderId) {
     console.error('[stripe-webhook] Order checkout completed but missing orderId in metadata');
     return;

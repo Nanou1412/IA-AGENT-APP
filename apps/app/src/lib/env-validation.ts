@@ -255,6 +255,22 @@ export function requireValidEnvironment(): void {
       'Set AUTH_DEV_CREDENTIALS=false or remove it from your environment.'
     );
   }
+
+  // SECURITY: Block SKIP_TWILIO_SIGNATURE in production (F-008)
+  if (isProd && process.env.SKIP_TWILIO_SIGNATURE === '1') {
+    throw new Error(
+      'SECURITY VIOLATION: SKIP_TWILIO_SIGNATURE=1 is not allowed in production. ' +
+      'Remove this variable from your production environment.'
+    );
+  }
+
+  // SECURITY: Require INTERNAL_API_KEY in production (F-003/F-004)
+  if (isProd && !process.env.INTERNAL_API_KEY) {
+    throw new Error(
+      'SECURITY VIOLATION: INTERNAL_API_KEY is required in production. ' +
+      'Set a secure random string (min 32 chars) for server-to-server authentication.'
+    );
+  }
   
   // Log warnings
   if (result.warnings.length > 0) {

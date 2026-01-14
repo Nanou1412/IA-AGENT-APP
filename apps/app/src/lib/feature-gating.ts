@@ -152,7 +152,7 @@ export function canUseModule(
   module: string,
   context: OrgContextWithIndustry
 ): FeatureGateResult {
-  const { org, settings, industryConfig } = context;
+  const { settings, industryConfig } = context;
   
   // Non-sensitive modules are always accessible
   if (!isSensitiveModule(module)) {
@@ -418,8 +418,8 @@ export function getModuleAccessSummary(
   const result: Record<string, FeatureGateResult> = {};
   
   // Check all sensitive modules
-  for (const module of SENSITIVE_MODULES) {
-    result[module] = canUseModule(module, context);
+  for (const moduleName of SENSITIVE_MODULES) {
+    result[moduleName] = canUseModule(moduleName, context);
   }
   
   return result;

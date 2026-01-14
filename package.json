@@ -6,6 +6,8 @@
     "dev:realtime": "pnpm --filter=@repo/realtime-server dev",
     "build": "pnpm run --recursive build",
     "lint": "pnpm run --recursive lint",
+    "typecheck": "pnpm -r --filter ./apps/app --filter ./apps/marketing --filter ./apps/realtime-server --filter ./packages/core --filter ./packages/ui --filter ./packages/templates typecheck",
+    "ci": "pnpm -w lint && pnpm -w typecheck && pnpm -w build",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",

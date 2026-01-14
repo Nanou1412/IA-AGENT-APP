@@ -24,8 +24,10 @@ import { prisma } from '@/lib/prisma';
 import { 
   MessagingChannel, 
   EngineRunStatus,
+  SandboxStatus,
+  SensitiveModulesStatus,
+  BillingStatus,
 } from '@prisma/client';
-import type { LLMMessage } from '@repo/core';
 import { canUseModuleWithKillSwitch, type FeatureGateResult, type OrgContextWithIndustry } from '@/lib/feature-gating';
 
 import { getOpenAIProvider, createOpenAIProvider } from './llm';
@@ -47,7 +49,7 @@ import {
   normalizePhone 
 } from './session-manager';
 import { createEngineRun, logEngineAudit } from './run-tracker';
-import { loadEngineContext, type EngineContext } from './context-loader';
+import { loadEngineContext } from './context-loader';
 
 // ============================================================================
 // Types
@@ -291,9 +293,9 @@ export async function handleInboundMessage(input: EngineInput): Promise<EngineOu
       settings: {
         id: context.settings.id,
         orgId,
-        sandboxStatus: context.settings.sandboxStatus as any,
-        sensitiveModulesStatus: 'enabled' as any,
-        billingStatus: context.settings.billingStatus as any,
+        sandboxStatus: context.settings.sandboxStatus as SandboxStatus,
+        sensitiveModulesStatus: SensitiveModulesStatus.enabled,
+        billingStatus: context.settings.billingStatus as BillingStatus,
         stripeCustomerId: null,
         stripeSubscriptionId: null,
         setupFeePaidAt: null,

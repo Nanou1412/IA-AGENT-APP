@@ -7,8 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { canUseModule, isSensitiveModule, isModuleAllowedByIndustry } from '@/lib/feature-gating';
 import { SandboxStatus, BillingStatus, SensitiveModulesStatus } from '@prisma/client';
-import type { OrgContextWithIndustry, IndustryModulesConfig } from '@/lib/feature-gating';
-import type { IndustryConfig } from '@prisma/client';
+import type { OrgContextWithIndustry } from '@/lib/feature-gating';
 
 // Helper to create test context
 function createContext(overrides: {

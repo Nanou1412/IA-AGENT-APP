@@ -5,9 +5,6 @@
  * OpenAI Realtime uses: PCM16 24kHz mono
  */
 
-import { createLogger } from './logger.js';
-
-const log = createLogger('audio');
 
 /**
  * Convert mulaw 8kHz to PCM16 24kHz

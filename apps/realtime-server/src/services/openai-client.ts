@@ -267,7 +267,7 @@ export class OpenAIRealtimeClient {
           log.debug('AI transcript', { transcript: event.transcript });
           break;
           
-        case 'response.function_call_arguments.delta':
+        case 'response.function_call_arguments.delta': {
           // Accumulate function call arguments
           const existing = this.pendingFunctionCalls.get(event.call_id);
           if (existing) {
@@ -279,6 +279,7 @@ export class OpenAIRealtimeClient {
             });
           }
           break;
+        }
           
         case 'response.function_call_arguments.done':
           // Execute the function

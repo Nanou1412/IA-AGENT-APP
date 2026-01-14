@@ -7,14 +7,12 @@
 
 import { prisma } from '@/lib/prisma';
 import { CallDirection, MessagingChannel } from '@prisma/client';
-import type { OrgSettings, ChannelEndpoint } from '@prisma/client';
+import type { OrgSettings } from '@prisma/client';
 import {
-  APP_URL,
   getPublicRequestUrl,
   validateTwilioSignature,
   validateTwilioRequestSignature,
 } from '@/lib/twilio';
-import { logTwilioAudit } from '@/lib/twilio-helpers';
 
 // ============================================================================
 // Re-exports for convenience

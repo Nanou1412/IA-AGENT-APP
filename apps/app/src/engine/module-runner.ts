@@ -293,7 +293,7 @@ async function greetingModule(context: ModuleContext): Promise<ModuleResult> {
 /**
  * Goodbye Module - Handles farewells
  */
-async function goodbyeModule(context: ModuleContext): Promise<ModuleResult> {
+async function goodbyeModule(): Promise<ModuleResult> {
   return {
     responseText: DEFAULT_RESPONSES.goodbye,
     handoffTriggered: false,

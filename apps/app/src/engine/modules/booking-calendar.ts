@@ -115,7 +115,7 @@ const RESPONSES = {
  * Main booking calendar module handler
  */
 export async function bookingCalendarModule(context: BookingModuleContext): Promise<ModuleResult> {
-  const { orgId, sessionId, channel, intent, sessionMetadata, canUseModule } = context;
+  const { orgId, sessionId, intent, sessionMetadata, canUseModule } = context;
 
   // Check if booking module is allowed
   const gating = canUseModule('booking');

@@ -112,7 +112,7 @@ function createRedisClient() {
 
     async flushPattern(pattern: string): Promise<void> {
       // Upstash doesn't support SCAN easily via REST, skip for now
-      console.warn('[cache] flushPattern not implemented for Upstash REST');
+      console.warn('[cache] flushPattern not implemented for Upstash REST', { pattern });
     },
   };
 }

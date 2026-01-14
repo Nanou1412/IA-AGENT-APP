@@ -16,9 +16,6 @@
 // Configuration
 // ============================================================================
 
-const OPENAI_REALTIME_URL = 'wss://api.openai.com/v1/realtime';
-const OPENAI_REALTIME_MODEL = 'gpt-4o-realtime-preview-2024-12-17';
-
 export interface RealtimeConfig {
   apiKey: string;
   model?: string;

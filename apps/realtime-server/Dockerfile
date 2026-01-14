@@ -1,35 +1,43 @@
 # Dockerfile for OpenAI Realtime Voice Server
 # Optimized for Railway deployment
+# NOTE: This builds from the repo root context (monorepo)
 
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install pnpm globally (for monorepo compatibility)
+RUN npm install -g pnpm
+
+# Copy workspace configuration
+COPY pnpm-workspace.yaml ./
 COPY package.json ./
+COPY pnpm-lock.yaml ./
 
-# Install dependencies (npm is more reliable for standalone packages)
-RUN npm install
+# Copy the realtime-server package
+COPY apps/realtime-server ./apps/realtime-server
 
-# Copy source code
-COPY . .
+WORKDIR /app/apps/realtime-server
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
 
 # Build TypeScript
-RUN npm run build
+RUN pnpm build
 
 # Production image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Copy package files for production install
+COPY --from=builder /app/apps/realtime-server/package.json ./
 
-# Install production dependencies only
+# Install production dependencies only (npm for simpler standalone install)
 RUN npm install --omit=dev
 
 # Copy built files
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/apps/realtime-server/dist ./dist
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

@@ -7,7 +7,7 @@
  * - resolveOrgFromStripeEvent (with mocks)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type Stripe from 'stripe';
 
 // Mock Prisma before importing billing-helpers
@@ -207,14 +207,14 @@ describe('resolveOrgFromStripeEvent', () => {
     id: 'settings_123',
     orgId: 'org_test123',
     stripeCustomerId: 'cus_test456',
-  };
+  } as NonNullable<Awaited<ReturnType<typeof prisma.orgSettings.findUnique>>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('resolves org from metadata.orgId (strategy 1)', async () => {
-    vi.mocked(prisma.orgSettings.findUnique).mockResolvedValueOnce(mockOrgSettings as any);
+    vi.mocked(prisma.orgSettings.findUnique).mockResolvedValueOnce(mockOrgSettings);
 
     const event = {
       id: 'evt_123',
@@ -242,7 +242,7 @@ describe('resolveOrgFromStripeEvent', () => {
     // First call (metadata lookup) returns null
     vi.mocked(prisma.orgSettings.findUnique).mockResolvedValueOnce(null);
     // Second call (customer lookup) returns org
-    vi.mocked(prisma.orgSettings.findFirst).mockResolvedValueOnce(mockOrgSettings as any);
+    vi.mocked(prisma.orgSettings.findFirst).mockResolvedValueOnce(mockOrgSettings);
 
     const event = {
       id: 'evt_123',
@@ -286,7 +286,7 @@ describe('resolveOrgFromStripeEvent', () => {
   });
 
   it('resolves org from customer object with id field', async () => {
-    vi.mocked(prisma.orgSettings.findFirst).mockResolvedValueOnce(mockOrgSettings as any);
+    vi.mocked(prisma.orgSettings.findFirst).mockResolvedValueOnce(mockOrgSettings);
 
     const event = {
       id: 'evt_123',

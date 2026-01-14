@@ -2,7 +2,7 @@
  * Intent Router Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { IntentRouter, createIntentRouter, DEFAULT_INTENTS } from './intent-router';
 import { getDefaultRules } from './policies';
 import type { LLMProvider, IntentClassificationResult } from '@repo/core';

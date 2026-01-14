@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest';
 import {
   parseTakeawayPaymentConfig,
   DEFAULT_TAKEAWAY_PAYMENT_CONFIG,
-  DEFAULT_PAYMENT_MESSAGES_CONFIG,
   renderPaymentMessage,
   isPaymentRequired,
   canRetryPayment,

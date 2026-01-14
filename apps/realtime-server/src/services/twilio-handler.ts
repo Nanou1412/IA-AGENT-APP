@@ -2,13 +2,17 @@
  * Twilio WebSocket Handler
  * 
  * Handles Twilio Media Stream WebSocket connections and bridges them to OpenAI.
+ * 
+ * SECURITY (F-006): Requires signed token for WebSocket connections
  */
 
 import WebSocket, { WebSocketServer } from 'ws';
 import { createLogger } from '../utils/logger.js';
 import { SessionManager, VoiceSession } from './session-manager.js';
 import { AppClient } from './app-client.js';
-import { convertTwilioToOpenAI, convertOpenAIToTwilio } from '../utils/audio.js';
+import { convertTwilioToOpenAI } from '../utils/audio.js';
+import { verifyInternalToken } from '../utils/internal-token.js';
+import type { ServerConfig } from '../config.js';
 import type {
   TwilioMessage,
   TwilioStartMessage,
@@ -22,10 +26,12 @@ export class TwilioHandler {
   private wss: WebSocketServer | null = null;
   private sessionManager: SessionManager;
   private appClient: AppClient;
+  private config: ServerConfig;
   
-  constructor(sessionManager: SessionManager, appClient: AppClient) {
+  constructor(sessionManager: SessionManager, appClient: AppClient, config: ServerConfig) {
     this.sessionManager = sessionManager;
     this.appClient = appClient;
+    this.config = config;
   }
   
   /**
@@ -46,14 +52,31 @@ export class TwilioHandler {
   
   /**
    * Handle new WebSocket connection from Twilio
+   * SECURITY (F-006): Verifies token before accepting connection
    */
   private handleConnection(ws: WebSocket, req: import('http').IncomingMessage): void {
     const url = new URL(req.url || '', `http://${req.headers.host}`);
-    const orgId = url.searchParams.get('orgId') || '';
+    const token = url.searchParams.get('token') || '';
     const callSid = url.searchParams.get('callSid') || '';
     const from = url.searchParams.get('from') || '';
     
-    log.info('New Twilio connection', { orgId, callSid, from });
+    // SECURITY: Verify token to extract orgId
+    if (!token) {
+      log.error('WebSocket connection rejected: Missing token');
+      ws.close(4001, 'Unauthorized: Missing token');
+      return;
+    }
+    
+    const tokenResult = verifyInternalToken(token, this.config.internalApiKey);
+    if (!tokenResult.ok) {
+      log.error('WebSocket connection rejected: Invalid token', { error: tokenResult.error });
+      ws.close(4001, `Unauthorized: ${tokenResult.error}`);
+      return;
+    }
+    
+    const orgId = tokenResult.payload!.orgId;
+    
+    log.info('New Twilio connection (token verified)', { orgId, callSid, from: '***' });
     
     // Create initial context (will be updated on 'start' message)
     const initialContext: TwilioSessionContext = {

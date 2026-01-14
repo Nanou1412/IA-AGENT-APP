@@ -7,7 +7,6 @@
  */
 
 import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui';
 import { createBillingCheckoutSession, createBillingPortalSession } from '@/actions/billing';
 import type { BillingStatus } from '@prisma/client';
@@ -24,8 +23,6 @@ export function BillingActions({
   hasSubscription 
 }: BillingActionsProps) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-  
   const handleActivateSubscription = () => {
     startTransition(async () => {
       const result = await createBillingCheckoutSession();
@@ -61,10 +58,10 @@ export function BillingActions({
           disabled
           className="opacity-50 cursor-not-allowed"
         >
-          Activer l'abonnement
+          Activer l&apos;abonnement
         </Button>
         <p className="text-sm text-gray-500 mt-2">
-          Complétez d'abord le cycle sandbox pour activer la facturation.
+          Complétez d&apos;abord le cycle sandbox pour activer la facturation.
         </p>
       </div>
     );
@@ -130,7 +127,7 @@ export function BillingActions({
             onClick={handleManageSubscription}
             disabled={isPending}
           >
-            Gérer l'abonnement
+            Gérer l&apos;abonnement
           </Button>
         )}
       </div>

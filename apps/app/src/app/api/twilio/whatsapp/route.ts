@@ -36,6 +36,7 @@ import { withRequestContext, getCorrelationId, logWithContext, generateCorrelati
 import { checkAbuse, handleAbuse, isSessionBlocked } from '@/lib/abuse';
 import { increment, METRIC_NAMES, recordTwilioWhatsapp } from '@/lib/metrics';
 import { parseFormBody } from '@/lib/twilio-webhook-utils';
+import { redactPhone } from '@/lib/pii-redaction';
 
 // Disable body parsing - we need to handle form-urlencoded
 export const dynamic = 'force-dynamic';
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(`[twilio-whatsapp] Inbound message: ${MessageSid} from ${From} (${ProfileName || 'unknown'}) to ${To}`);
+    console.log(`[twilio-whatsapp] Inbound message: ${MessageSid} from ${redactPhone(From)} (${ProfileName || 'unknown'}) to ${redactPhone(To)}`);
     
     // Validate Twilio signature using real public URL (proxy-aware)
     const signature = req.headers.get('x-twilio-signature') || '';

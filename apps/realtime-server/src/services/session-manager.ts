@@ -171,7 +171,7 @@ export class SessionManager {
       throw new Error('Org config not loaded');
     }
     
-    const tools = this.buildTools(session.orgConfig);
+    const tools = this.buildTools();
     const systemPrompt = this.buildSystemPrompt(session);
     
     session.openaiClient = new OpenAIRealtimeClient({
@@ -211,7 +211,7 @@ export class SessionManager {
   /**
    * Build tools for the session
    */
-  private buildTools(orgConfig: OrgConfig): RealtimeTool[] {
+  private buildTools(): RealtimeTool[] {
     return [
       {
         type: 'function',
@@ -370,7 +370,7 @@ ${orgConfig.systemPrompt || ''}`;
     args: Record<string, unknown>,
     callId: string
   ): Promise<string> {
-    log.info('Handling function call', { sessionId: session.id, name, args });
+    log.info('Handling function call', { sessionId: session.id, callId, name, args });
     
     switch (name) {
       case 'add_item':

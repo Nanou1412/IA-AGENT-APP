@@ -8,7 +8,7 @@
  * - 200 OK: All systems operational
  * - 503 Service Unavailable: One or more critical systems down
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isCacheConfigured } from '@/lib/cache';
 import { envChecks } from '@/lib/env-validation';
@@ -153,9 +153,7 @@ async function checkOpenAI(): Promise<ServiceStatus> {
 // Handler
 // ============================================================================
 
-export async function GET(req: NextRequest) {
-  const startTime = Date.now();
-  
+export async function GET() {
   // Run all checks in parallel
   const [database, redis, openai] = await Promise.all([
     checkDatabase(),
@@ -164,7 +162,6 @@ export async function GET(req: NextRequest) {
   ]);
   
   // Determine overall status
-  const allOk = database.status === 'ok' && redis.status === 'ok' && openai.status === 'ok';
   const anyError = database.status === 'error' || redis.status === 'error' || openai.status === 'error';
   
   // Database is critical - if it's down, we're unhealthy

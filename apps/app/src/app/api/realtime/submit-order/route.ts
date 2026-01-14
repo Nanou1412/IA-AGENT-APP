@@ -4,6 +4,8 @@
  * POST /api/realtime/submit-order
  * 
  * Creates a new order in the database and optionally triggers payment flow.
+ * 
+ * SECURITY (F-004): In production, requires valid INTERNAL_API_KEY header.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,23 +17,47 @@ export const dynamic = 'force-dynamic';
 
 // Internal API key for server-to-server communication
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 /**
- * Validate internal API key if configured
+ * Validate internal API key - SECURITY HARDENED
+ * In production: ALWAYS require valid key
+ * In development: Allow if no key configured
  */
-function validateInternalApiKey(req: NextRequest): boolean {
-  if (!INTERNAL_API_KEY) {
-    return true;
+function validateInternalApiKey(req: NextRequest): { valid: boolean; error?: string } {
+  const providedKey = req.headers.get('x-internal-api-key');
+  
+  if (IS_PRODUCTION) {
+    // Production: MUST have key configured (enforced at boot via env-validation)
+    // and provided key MUST match
+    if (!providedKey) {
+      return { valid: false, error: 'Missing x-internal-api-key header' };
+    }
+    if (providedKey !== INTERNAL_API_KEY) {
+      return { valid: false, error: 'Invalid API key' };
+    }
+    return { valid: true };
   }
   
-  const providedKey = req.headers.get('X-Internal-API-Key');
-  return providedKey === INTERNAL_API_KEY;
+  // Development: Allow if no key configured
+  if (!INTERNAL_API_KEY) {
+    return { valid: true };
+  }
+  
+  // Development with key configured: require valid key
+  if (!providedKey || providedKey !== INTERNAL_API_KEY) {
+    return { valid: false, error: 'Invalid API key' };
+  }
+  
+  return { valid: true };
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Validate API key
-    if (!validateInternalApiKey(req)) {
+    // Validate API key (SECURITY: F-004)
+    const authResult = validateInternalApiKey(req);
+    if (!authResult.valid) {
+      console.warn('[realtime/submit-order] Auth failed:', authResult.error);
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

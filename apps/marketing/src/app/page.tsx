@@ -45,7 +45,7 @@ export default function HomePage() {
             <div className="p-6 border rounded-lg">
               <h3 className="text-xl font-semibold mb-3">Fully Customizable</h3>
               <p className="text-gray-600">
-                Tailor your agent's responses to match your brand voice.
+                Tailor your agent&apos;s responses to match your brand voice.
               </p>
             </div>
           </div>

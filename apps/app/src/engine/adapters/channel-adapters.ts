@@ -55,7 +55,7 @@ export function adaptForSMS(text: string): ChannelAdapterResult {
   const config = CHANNEL_CONFIGS.sms;
   
   // Strip any markdown/HTML
-  let formatted = stripFormatting(text);
+  const formatted = stripFormatting(text);
   
   // Truncate if needed
   const { text: finalText, truncated } = truncateText(formatted, config.maxLength, config.truncationSuffix);
@@ -79,7 +79,7 @@ export function adaptForWhatsApp(text: string): ChannelAdapterResult {
   const config = CHANNEL_CONFIGS.whatsapp;
   
   // Convert markdown to WhatsApp format
-  let formatted = convertMarkdownToWhatsApp(text);
+  const formatted = convertMarkdownToWhatsApp(text);
   
   // Truncate if needed
   const { text: finalText, truncated } = truncateText(formatted, config.maxLength, config.truncationSuffix);

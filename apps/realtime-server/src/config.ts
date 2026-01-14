@@ -63,9 +63,19 @@ export function validateConfig(cfg: ServerConfig): void {
     throw new Error('OPENAI_API_KEY must start with sk-');
   }
   
+  // SECURITY (F-005/F-006): Require INTERNAL_API_KEY in production
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd && !cfg.internalApiKey) {
+    throw new Error(
+      'SECURITY: INTERNAL_API_KEY is required in production. ' +
+      'This key is used to verify tokens from the main app.'
+    );
+  }
+  
   console.log(`[config] Loaded configuration:`);
   console.log(`  - Port: ${cfg.port}`);
   console.log(`  - OpenAI Model: ${cfg.openaiModel}`);
   console.log(`  - App URL: ${cfg.appUrl}`);
   console.log(`  - Log Level: ${cfg.logLevel}`);
+  console.log(`  - Internal API Key: ${cfg.internalApiKey ? '***configured***' : '(not set)'}`);
 }

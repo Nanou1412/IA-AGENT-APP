@@ -83,17 +83,6 @@ export function estimateCostFromTokens(
   return (inputTokens * modelPricing.input) + (outputTokens * modelPricing.output);
 }
 
-/**
- * Get or create monthly cost record for an org
- */
-async function getOrCreateMonthlyCost(orgId: string, month: string) {
-  return prisma.monthlyOrgCost.upsert({
-    where: { orgId_month: { orgId, month } },
-    create: { orgId, month },
-    update: {},
-  });
-}
-
 // ============================================================================
 // Cost Recording
 // ============================================================================

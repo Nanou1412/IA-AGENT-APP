@@ -7,7 +7,6 @@
  * This is SEPARATE from subscription billing - uses one-time payments.
  */
 
-import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { OrderPaymentStatus, OrderPaymentLinkStatus, OrderEventType } from '@prisma/client';

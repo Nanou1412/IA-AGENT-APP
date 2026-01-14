@@ -121,10 +121,10 @@ export default async function StripeDebugPage({
                     <div className="text-xs text-gray-500 font-mono">{s.orgId.slice(0, 15)}...</div>
                   </td>
                   <td className="px-4 py-2">
-                    <StatusBadge status={s.sandboxStatus} type="sandbox" />
+                    <StatusBadge status={s.sandboxStatus} />
                   </td>
                   <td className="px-4 py-2">
-                    <StatusBadge status={s.billingStatus} type="billing" />
+                    <StatusBadge status={s.billingStatus} />
                   </td>
                   <td className="px-4 py-2 font-mono text-xs">
                     {s.stripeCustomerId?.slice(0, 20) ?? '-'}
@@ -226,7 +226,7 @@ export default async function StripeDebugPage({
 }
 
 // Helper components
-function StatusBadge({ status, type }: { status: string; type: 'sandbox' | 'billing' }) {
+function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     // Sandbox
     sandbox_required: 'bg-gray-100 text-gray-800',

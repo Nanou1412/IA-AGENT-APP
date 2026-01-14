@@ -1,7 +1,6 @@
 'use client';
 
 import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { startSandbox } from '@/actions/sandbox';
 
 interface StartSandboxButtonProps {
@@ -10,8 +9,6 @@ interface StartSandboxButtonProps {
 
 export function StartSandboxButton({ disabled = false }: StartSandboxButtonProps) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
   const handleClick = () => {
     startTransition(async () => {
       const result = await startSandbox();

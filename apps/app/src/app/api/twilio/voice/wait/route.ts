@@ -12,7 +12,6 @@ import {
   generateQueueWaitTwiML,
   getVoiceConfig,
   DEFAULT_CALL_QUEUE_WAIT_TEXT,
-  type TwilioQueueWaitPayload,
 } from '@/lib/twilio-voice';
 import { parseFormBody } from '@/lib/twilio-webhook-utils';
 
@@ -32,12 +31,8 @@ export async function POST(req: NextRequest) {
   try {
     // Parse form body
     const params = await parseFormBody(req);
-    const payload = params as unknown as TwilioQueueWaitPayload;
-    
     // Get orgId from query parameter
     const orgId = req.nextUrl.searchParams.get('orgId');
-    
-    const { CallSid, QueueName, QueueTime, QueuePosition } = payload;
     
     // Validate Twilio signature in production
     const signature = req.headers.get('x-twilio-signature') || '';

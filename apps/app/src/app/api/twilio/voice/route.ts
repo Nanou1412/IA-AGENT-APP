@@ -19,12 +19,8 @@ import {
   validateTwilioSignature,
   DEFAULT_CALL_WELCOME_TEXT,
   DEFAULT_CALL_DENY_TEXT,
-  DEFAULT_UNMAPPED_CALL_TEXT,
-  DEFAULT_NO_HANDOFF_TEXT,
   generateDeniedCallTwiML,
   generateUnmappedCallTwiML,
-  generateWelcomeWithDialTwiML,
-  generateNoHandoffTwiML,
   generateGatherMenuTwiML,
   createCallLog,
   updateCallLogDenied,
@@ -37,8 +33,9 @@ import { logTwilioAudit } from '@/lib/twilio-helpers';
 import { canUseModuleWithKillSwitch } from '@/lib/feature-gating';
 import { handleInboundCallGreeting, isOpenAIConfigured } from '@/engine';
 import { withRequestContext, getCorrelationId, logWithContext, generateCorrelationId } from '@/lib/correlation';
-import { increment, METRIC_NAMES, recordTwilioVoice } from '@/lib/metrics';
+import { recordTwilioVoice } from '@/lib/metrics';
 import { parseFormBody } from '@/lib/twilio-webhook-utils';
+import { signInternalToken } from '@/lib/internal-token';
 
 // Disable body parsing - we handle form-urlencoded
 export const dynamic = 'force-dynamic';
@@ -61,9 +58,12 @@ function isRealtimeConfigured(): boolean {
 
 /**
  * Generate TwiML to redirect to Realtime server
+ * SECURITY (F-005/F-006): Uses signed token instead of raw orgId
  */
 function generateRealtimeRedirectTwiML(orgId: string, callSid: string, from: string): string {
-  const twimlUrl = `${REALTIME_SERVER_URL}/twiml/start?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
+  // Create signed token with orgId for secure server-to-server communication
+  const token = signInternalToken(orgId, 'voice', 60);
+  const twimlUrl = `${REALTIME_SERVER_URL}/twiml/start?token=${encodeURIComponent(token)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

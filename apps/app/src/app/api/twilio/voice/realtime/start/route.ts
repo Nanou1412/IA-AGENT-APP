@@ -19,7 +19,6 @@ import {
   isRealtimeConfigured,
 } from '@/lib/openai-realtime';
 import { getCachedOrgContext, getCachedTemplate } from '@/lib/cached-config';
-import { getCachedVoiceConfig } from '@/lib/cached-config';
 import { 
   getPublicRequestUrl,
   validateTwilioSignature,

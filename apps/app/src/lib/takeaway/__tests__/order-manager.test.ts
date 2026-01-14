@@ -2,7 +2,7 @@
  * Tests for order-manager CRUD operations
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { generateOrderIdempotencyKey, buildOrderSummary, formatPickupTime, getShortOrderId } from '../order-manager';
 
 // Mock prisma

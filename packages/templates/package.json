@@ -12,7 +12,8 @@
   },
   "scripts": {
     "lint": "echo 'No lint step for templates'",
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

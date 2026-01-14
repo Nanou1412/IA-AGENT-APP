@@ -33,6 +33,7 @@ import { setLogLevel, createLogger } from './utils/logger.js';
 import { SessionManager } from './services/session-manager.js';
 import { AppClient } from './services/app-client.js';
 import { TwilioHandler } from './services/twilio-handler.js';
+import { verifyInternalToken } from './utils/internal-token.js';
 
 const log = createLogger('server');
 
@@ -52,7 +53,7 @@ async function main(): Promise<void> {
     // Initialize services
     const sessionManager = new SessionManager(config);
     const appClient = new AppClient(config);
-    const twilioHandler = new TwilioHandler(sessionManager, appClient);
+    const twilioHandler = new TwilioHandler(sessionManager, appClient, config);
     
     // Create Express app
     const app = express();
@@ -70,23 +71,34 @@ async function main(): Promise<void> {
     });
     
     // TwiML endpoint - returns TwiML to start Media Stream
+    // SECURITY (F-005): Requires signed token instead of raw orgId
     app.post('/twiml/start', async (req, res) => {
-      const orgId = req.query.orgId as string || req.body.orgId || '';
+      const token = (req.query.token as string) || '';
       const callSid = req.body.CallSid || '';
       const from = req.body.From || '';
       
-      log.info('TwiML start requested', { orgId, callSid, from });
-      
-      if (!orgId) {
-        log.error('Missing orgId in TwiML request');
-        res.status(400).send('Missing orgId');
+      // SECURITY: Verify token to extract orgId
+      if (!token) {
+        log.error('Missing token in TwiML request');
+        res.status(401).send('Unauthorized: Missing token');
         return;
       }
       
-      // Build WebSocket URL for Media Stream
+      const tokenResult = verifyInternalToken(token, config.internalApiKey);
+      if (!tokenResult.ok) {
+        log.error('Invalid token in TwiML request', { error: tokenResult.error });
+        res.status(401).send(`Unauthorized: ${tokenResult.error}`);
+        return;
+      }
+      
+      const orgId = tokenResult.payload!.orgId;
+      
+      log.info('TwiML start requested (token verified)', { orgId, callSid, from: from ? '***' : '' });
+      
+      // Build WebSocket URL for Media Stream (pass token, not orgId)
       const wsProtocol = req.secure ? 'wss' : 'ws';
       const host = req.headers.host || 'localhost:8080';
-      const streamUrl = `${wsProtocol}://${host}/ws/twilio?orgId=${encodeURIComponent(orgId)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
+      const streamUrl = `${wsProtocol}://${host}/ws/twilio?token=${encodeURIComponent(token)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
       
       // Generate TwiML
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -94,7 +106,7 @@ async function main(): Promise<void> {
   <Say voice="alice" language="en-AU">Please wait while I connect you to our ordering assistant.</Say>
   <Connect>
     <Stream url="${streamUrl}">
-      <Parameter name="orgId" value="${orgId}" />
+      <Parameter name="token" value="${token}" />
       <Parameter name="from" value="${from}" />
     </Stream>
   </Connect>

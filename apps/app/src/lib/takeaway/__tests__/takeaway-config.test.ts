@@ -10,7 +10,6 @@ import {
   validatePickupTime,
   renderTemplate,
   DEFAULT_TAKEAWAY_CONFIG,
-  type TakeawayConfig,
   type ConfirmationConfig,
 } from '../takeaway-config';
 import { buildOrderSummary, type OrderItemDraft } from '../order-manager';

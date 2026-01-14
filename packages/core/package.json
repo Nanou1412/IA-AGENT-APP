@@ -11,10 +11,13 @@
     }
   },
   "scripts": {
-    "lint": "eslint src/",
-    "build": "echo 'No build step required'"
+    "lint": "eslint --ext .ts,.tsx src/",
+    "build": "echo 'No build step required'",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   }

@@ -29,7 +29,7 @@ const STEP_LABELS: Record<string, { title: string; description: string }> = {
 };
 
 export default async function SandboxIntroPage() {
-  const { user, org } = await requireUserWithOrg();
+  const { org } = await requireUserWithOrg();
 
   // Get org settings
   const settings = await prisma.orgSettings.findUnique({

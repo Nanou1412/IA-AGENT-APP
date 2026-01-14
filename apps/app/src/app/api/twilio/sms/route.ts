@@ -38,6 +38,7 @@ import { checkRateLimit } from '@/engine/rate-limiter';
 import { checkFeature, FeatureFlag } from '@/lib/feature-flags';
 import { increment, METRIC_NAMES, recordTwilioSms } from '@/lib/metrics';
 import { parseFormBody } from '@/lib/twilio-webhook-utils';
+import { redactPhone } from '@/lib/pii-redaction';
 
 // Disable body parsing - we need to handle form-urlencoded
 export const dynamic = 'force-dynamic';
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(`[twilio-sms] Inbound message: ${MessageSid} from ${From} to ${To}`);
+    console.log(`[twilio-sms] Inbound message: ${MessageSid} from ${redactPhone(From)} to ${redactPhone(To)}`);
     
     // Validate Twilio signature using real public URL (proxy-aware)
     const signature = req.headers.get('x-twilio-signature') || '';

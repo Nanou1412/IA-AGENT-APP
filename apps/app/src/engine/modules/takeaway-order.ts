@@ -43,7 +43,6 @@ import {
   calculateItemPrice,
   formatPrice,
   type MenuConfig,
-  type MenuItem,
 } from '@/lib/takeaway/menu-config';
 import {
   createOrderDraft,
@@ -53,7 +52,6 @@ import {
   requestOrderConfirmation,
   getPendingOrderForSession,
   logOrderEvent,
-  buildOrderSummary,
   formatPickupTime,
   getShortOrderId,
   setOrderPendingPayment,
@@ -374,7 +372,7 @@ export async function takeawayOrderModule(context: TakeawayModuleContext): Promi
   const orderState = getOrderState(sessionMetadata);
 
   // Check for pending order in database
-  let existingOrder = orderState.orderId 
+  const existingOrder = orderState.orderId 
     ? await prisma.order.findUnique({ 
         where: { id: orderState.orderId },
         include: { items: true },

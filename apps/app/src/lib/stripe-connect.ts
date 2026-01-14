@@ -102,7 +102,7 @@ export function verifyState(state: string): string {
  * Exchange OAuth code for Stripe account ID
  */
 export async function exchangeCodeForAccount(code: string): Promise<string> {
-  const { clientId, secretKey } = validateStripeConnectConfig();
+  const { secretKey } = validateStripeConnectConfig();
 
   const params = new URLSearchParams({
     grant_type: 'authorization_code',

@@ -151,7 +151,7 @@ export default async function BillingPage({
               <div className="font-semibold">Sandbox non approuvé</div>
               <div className="text-sm">
                 Votre sandbox doit être approuvé avant de pouvoir activer la facturation.
-                Complétez d'abord le cycle sandbox.
+                Complétez d&apos;abord le cycle sandbox.
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default async function BillingPage({
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Statut de l'abonnement</h2>
+            <h2 className="text-xl font-semibold mb-2">Statut de l&apos;abonnement</h2>
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
               <span>{statusConfig.icon}</span>
               <span>{statusConfig.label}</span>
@@ -264,7 +264,7 @@ export default async function BillingPage({
       ) : (
         <div className="bg-gray-50 rounded-lg border p-6 text-center">
           <p className="text-gray-600">
-            Seul le propriétaire de l'organisation peut gérer la facturation.
+            Seul le propriétaire de l&apos;organisation peut gérer la facturation.
           </p>
         </div>
       )}

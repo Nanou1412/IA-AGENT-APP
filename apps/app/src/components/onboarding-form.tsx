@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui';
 import { createOrg } from '@/actions/onboarding';
 import { URLS } from '@/lib/urls';
@@ -33,7 +33,6 @@ const TIMEZONES = [
 ];
 
 export function OnboardingForm({ cookieIndustry }: OnboardingFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState(1);

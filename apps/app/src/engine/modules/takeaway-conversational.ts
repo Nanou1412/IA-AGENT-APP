@@ -15,8 +15,6 @@
  */
 
 import type { ModuleContext, ModuleResult } from '../module-runner';
-import { prisma } from '@/lib/prisma';
-import { OrderStatus, OrderPaymentStatus } from '@prisma/client';
 import { getOpenAIProvider, createOpenAIProvider, ENGINE_CONFIG } from '../llm';
 import type { LLMMessage, LLMFunctionDef } from '@repo/core';
 import { getCachedOrgSettings } from '@/lib/cached-config';
@@ -27,31 +25,25 @@ import {
 import {
   parseTakeawayPaymentConfig,
   isPaymentRequired,
-  type TakeawayPaymentConfig,
 } from '@/lib/takeaway/takeaway-payment-config';
 import {
   parseMenuConfig,
   findMenuItem,
   formatPrice,
   type MenuConfig,
-  type MenuItem,
 } from '@/lib/takeaway/menu-config';
 import {
   createOrderDraft,
   confirmOrder,
-  cancelOrder,
-  getPendingOrderForSession,
-  logOrderEvent,
-  formatPickupTime,
   getShortOrderId,
   setOrderPendingPayment,
   type OrderDraft,
   type OrderItemDraft,
 } from '@/lib/takeaway/order-manager';
-import { OrderEventType } from '@prisma/client';
 import { notifyBusinessOfOrder } from './takeaway-notifications';
 import { createOrderCheckoutSession } from '@/lib/stripe/orders';
 import { sendPaymentLinkSms } from '@/lib/sms/customer-notifications';
+import { requireAiBudget, recordAiCost, CostLimitError, estimateCostFromTokens } from '@/lib/cost-tracker';
 
 // ============================================================================
 // Types
@@ -221,8 +213,6 @@ function handleAddToOrder(
     });
   }
 
-  const itemTotal = (menuItem.priceCents * args.quantity) / 100;
-  
   return {
     success: true,
     message: `Added ${args.quantity}x ${menuItem.name} (${formatPrice(menuItem.priceCents * args.quantity, menuConfig.currency)}) to your order.`,
@@ -372,13 +362,7 @@ async function processFunctionCall(
   functionName: string,
   functionArgs: Record<string, unknown>,
   orderState: OrderState,
-  menuConfig: MenuConfig,
-  context: {
-    orgId: string;
-    sessionId: string;
-    channel: string;
-    customerPhone: string;
-  }
+  menuConfig: MenuConfig
 ): Promise<FunctionCallResult> {
   switch (functionName) {
     case 'add_to_order':
@@ -490,12 +474,23 @@ export async function takeawayConversationalModule(
   const functions = getOrderFunctions(menuConfig);
 
   try {
+    // Phase 8 (F-009): Check budget BEFORE calling LLM
+    await requireAiBudget(orgId, 0.03); // Estimated cost for takeaway conversation
+    
     // Call LLM with function calling
     const response = await provider.chatCompletionWithFunctions(
       messages,
       functions,
       { temperature: 0.7 }
     );
+    
+    // Phase 8 (F-009): Record actual cost
+    const costUsd = estimateCostFromTokens(
+      response.inputTokens || 0, 
+      response.outputTokens || 0, 
+      channel === 'voice' ? ENGINE_CONFIG.lowCostModel : 'gpt-4o'
+    );
+    await recordAiCost(orgId, costUsd, response.inputTokens || 0, response.outputTokens || 0);
 
     let responseText = response.content || '';
     let orderConfirmed = false;
@@ -510,8 +505,7 @@ export async function takeawayConversationalModule(
           fc.name,
           fc.arguments,
           orderState,
-          menuConfig,
-          { orgId, sessionId, channel, customerPhone }
+          menuConfig
         );
 
         if (result.message === 'ORDER_CONFIRM_REQUESTED') {
@@ -670,6 +664,16 @@ export async function takeawayConversationalModule(
     };
 
   } catch (error) {
+    // Phase 8 (F-009): Handle budget exceeded
+    if (error instanceof CostLimitError) {
+      console.warn('[takeaway-conversational] Budget limit exceeded:', error.message);
+      return {
+        responseText: "I'm unable to process orders at this time due to system limits. Please try again later or call us directly.",
+        handoffTriggered: true,
+        handoffReason: 'Budget limit exceeded',
+        blockedBy: 'budget',
+      };
+    }
     console.error('[takeaway-conversational] Error:', error);
     return {
       responseText: "I'm having trouble right now. Let me connect you with someone who can help.",
