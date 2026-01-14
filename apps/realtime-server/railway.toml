@@ -1,10 +1,15 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+# IMPORTANT: Railway must use the repo ROOT as build context for monorepo
+# The Dockerfile expects to be built from root: docker build -f apps/realtime-server/Dockerfile .
+watchPatterns = ["apps/realtime-server/**"]
 
 [deploy]
+# CMD in Dockerfile handles start, but we specify for clarity
 startCommand = "node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+numReplicas = 1
