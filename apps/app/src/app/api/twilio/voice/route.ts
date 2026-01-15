@@ -35,7 +35,7 @@ import { handleInboundCallGreeting, isOpenAIConfigured } from '@/engine';
 import { withRequestContext, getCorrelationId, logWithContext, generateCorrelationId } from '@/lib/correlation';
 import { recordTwilioVoice } from '@/lib/metrics';
 import { parseFormBody } from '@/lib/twilio-webhook-utils';
-import { signInternalToken } from '@/lib/internal-token';
+import { signTokenWithEnvKey } from '@/lib/internal-token';
 
 // Disable body parsing - we handle form-urlencoded
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,7 @@ function isRealtimeConfigured(): boolean {
  */
 function generateRealtimeRedirectTwiML(orgId: string, callSid: string, from: string): string {
   // Create signed token with orgId for secure server-to-server communication
-  const token = signInternalToken(orgId, 'voice', 60);
+  const token = signTokenWithEnvKey(orgId, { endpointId: 'voice', ttlSeconds: 60 });
   const twimlUrl = `${REALTIME_SERVER_URL}/twiml/start?token=${encodeURIComponent(token)}&callSid=${encodeURIComponent(callSid)}&from=${encodeURIComponent(from)}`;
   
   return `<?xml version="1.0" encoding="UTF-8"?>
