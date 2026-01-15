@@ -66,7 +66,7 @@ export default async function AdminPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="font-semibold mb-2">🔧 Debug</h3>
           <p className="text-sm text-gray-600 mb-4">System diagnostics and debugging tools.</p>
-          <Link href="/admin/debug/stripe">
+          <Link href="/admin/debug">
             <Button variant="outline" size="sm">Debug Tools</Button>
           </Link>
         </div>
