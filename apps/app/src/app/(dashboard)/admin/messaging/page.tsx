@@ -13,7 +13,12 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 async function getMessagingStats() {
-  const [endpoints, recentLogs, orgStats] = await Promise.all([
+  // Get date for last 24h and 7d stats
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [endpoints, recentLogs, orgStats, msgStats24h, msgStats7d] = await Promise.all([
     prisma.channelEndpoint.findMany({
       include: {
         orgSettings: {
@@ -27,7 +32,7 @@ async function getMessagingStats() {
       orderBy: { createdAt: 'desc' },
     }),
     prisma.messageLog.findMany({
-      take: 20,
+      take: 50,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -52,9 +57,21 @@ async function getMessagingStats() {
         },
       },
     }),
+    // 24h stats by channel
+    prisma.messageLog.groupBy({
+      by: ['channel', 'direction'],
+      where: { createdAt: { gte: last24h } },
+      _count: true,
+    }),
+    // 7d total
+    prisma.messageLog.groupBy({
+      by: ['channel'],
+      where: { createdAt: { gte: last7d } },
+      _count: true,
+    }),
   ]);
 
-  return { endpoints, recentLogs, orgStats };
+  return { endpoints, recentLogs, orgStats, msgStats24h, msgStats7d };
 }
 
 function ChannelBadge({ channel }: { channel: MessagingChannel }) {
@@ -99,29 +116,54 @@ function DirectionBadge({ direction }: { direction: string }) {
 }
 
 async function MessagingDashboard() {
-  const { endpoints, recentLogs, orgStats } = await getMessagingStats();
+  const { endpoints, recentLogs, orgStats, msgStats24h, msgStats7d } = await getMessagingStats();
+
+  // Calculate 24h stats
+  const sms24h = msgStats24h.filter(s => s.channel === 'sms').reduce((sum, s) => sum + s._count, 0);
+  const whatsapp24h = msgStats24h.filter(s => s.channel === 'whatsapp').reduce((sum, s) => sum + s._count, 0);
+  const inbound24h = msgStats24h.filter(s => s.direction === 'inbound').reduce((sum, s) => sum + s._count, 0);
+  const outbound24h = msgStats24h.filter(s => s.direction === 'outbound').reduce((sum, s) => sum + s._count, 0);
+  
+  // Calculate 7d stats
+  const sms7d = msgStats7d.find(s => s.channel === 'sms')?._count || 0;
+  const whatsapp7d = msgStats7d.find(s => s.channel === 'whatsapp')?._count || 0;
+
+  // Recent logs stats
+  const failedLogs = recentLogs.filter(l => l.status === 'failed' || l.status === 'undelivered');
 
   return (
     <div className="space-y-8">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Endpoints Actifs</h3>
+          <h3 className="text-sm font-medium text-gray-500">Active Endpoints</h3>
           <p className="text-3xl font-bold text-gray-900">{endpoints.filter(e => e.isActive).length}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">SMS Endpoints</h3>
-          <p className="text-3xl font-bold text-blue-600">{endpoints.filter(e => e.channel === 'sms').length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">WhatsApp Endpoints</h3>
-          <p className="text-3xl font-bold text-green-600">{endpoints.filter(e => e.channel === 'whatsapp').length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Orgs avec Messaging</h3>
+          <h3 className="text-sm font-medium text-gray-500">Orgs Messaging</h3>
           <p className="text-3xl font-bold text-gray-900">
             {orgStats.filter(o => o.smsEnabled || o.whatsappEnabled).length}
           </p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">SMS (24h)</h3>
+          <p className="text-3xl font-bold text-blue-600">{sms24h}</p>
+          <p className="text-xs text-gray-400">{sms7d} last 7d</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">WhatsApp (24h)</h3>
+          <p className="text-3xl font-bold text-green-600">{whatsapp24h}</p>
+          <p className="text-xs text-gray-400">{whatsapp7d} last 7d</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">In/Out (24h)</h3>
+          <p className="text-3xl font-bold text-indigo-600">{inbound24h}/{outbound24h}</p>
+          <p className="text-xs text-gray-400">inbound/outbound</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Failed (50)</h3>
+          <p className="text-3xl font-bold text-red-600">{failedLogs.length}</p>
+          <p className="text-xs text-gray-400">recent errors</p>
         </div>
       </div>
 
@@ -237,8 +279,8 @@ async function MessagingDashboard() {
       {/* Recent Message Logs */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Messages Récents</h2>
-          <p className="text-sm text-gray-500">20 derniers messages (tous orgs)</p>
+          <h2 className="text-lg font-semibold text-gray-900">Recent Messages</h2>
+          <p className="text-sm text-gray-500">Last 50 messages (all orgs)</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
