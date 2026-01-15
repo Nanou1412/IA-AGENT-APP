@@ -13,7 +13,12 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 async function getVoiceStats() {
-  const [endpoints, recentCalls, orgStats] = await Promise.all([
+  // Get date for last 24h and 7d stats
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [endpoints, recentCalls, orgStats, callStats24h, callStats7d] = await Promise.all([
     prisma.channelEndpoint.findMany({
       where: { channel: MessagingChannel.voice },
       include: {
@@ -28,7 +33,7 @@ async function getVoiceStats() {
       orderBy: { createdAt: 'desc' },
     }),
     prisma.callLog.findMany({
-      take: 30,
+      take: 50,
       orderBy: { startedAt: 'desc' },
       select: {
         id: true,
@@ -57,9 +62,21 @@ async function getVoiceStats() {
         },
       },
     }),
+    // 24h stats
+    prisma.callLog.groupBy({
+      by: ['status'],
+      where: { startedAt: { gte: last24h } },
+      _count: true,
+    }),
+    // 7d stats
+    prisma.callLog.aggregate({
+      where: { startedAt: { gte: last7d } },
+      _count: true,
+      _sum: { durationSeconds: true },
+    }),
   ]);
 
-  return { endpoints, recentCalls, orgStats };
+  return { endpoints, recentCalls, orgStats, callStats24h, callStats7d };
 }
 
 function StatusBadge({ status, blockedBy }: { status: string | null; blockedBy?: string | null }) {
@@ -109,16 +126,23 @@ function formatDuration(seconds: number | null): string {
 }
 
 async function VoiceDashboard() {
-  const { endpoints, recentCalls, orgStats } = await getVoiceStats();
+  const { endpoints, recentCalls, orgStats, callStats24h, callStats7d } = await getVoiceStats();
 
   const voiceEnabledOrgs = orgStats.filter(o => o.voiceEnabled);
   const completedCalls = recentCalls.filter(c => c.status === 'completed');
   const deniedCalls = recentCalls.filter(c => c.blockedBy);
 
+  // Calculate 24h stats
+  const total24h = callStats24h.reduce((sum, s) => sum + s._count, 0);
+  const completed24h = callStats24h.find(s => s.status === 'completed')?._count || 0;
+  
+  // Calculate 7d stats
+  const totalMinutes7d = Math.round((callStats7d._sum.durationSeconds || 0) / 60);
+
   return (
     <div className="space-y-8">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">Voice Endpoints</h3>
           <p className="text-3xl font-bold text-gray-900">{endpoints.filter(e => e.isActive).length}</p>
@@ -128,16 +152,24 @@ async function VoiceDashboard() {
           <p className="text-3xl font-bold text-green-600">{voiceEnabledOrgs.length}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Recent Calls (30)</h3>
-          <p className="text-3xl font-bold text-blue-600">{recentCalls.length}</p>
+          <h3 className="text-sm font-medium text-gray-500">Calls (24h)</h3>
+          <p className="text-3xl font-bold text-blue-600">{total24h}</p>
+          <p className="text-xs text-gray-400">{completed24h} completed</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Completed</h3>
+          <h3 className="text-sm font-medium text-gray-500">Calls (7d)</h3>
+          <p className="text-3xl font-bold text-indigo-600">{callStats7d._count}</p>
+          <p className="text-xs text-gray-400">{totalMinutes7d} min total</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Recent (50)</h3>
           <p className="text-3xl font-bold text-green-600">{completedCalls.length}</p>
+          <p className="text-xs text-gray-400">completed</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">Denied</h3>
           <p className="text-3xl font-bold text-red-600">{deniedCalls.length}</p>
+          <p className="text-xs text-gray-400">blocked calls</p>
         </div>
       </div>
 
@@ -248,7 +280,7 @@ async function VoiceDashboard() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-lg font-medium text-gray-900">Recent Calls</h2>
-          <span className="text-sm text-gray-500">Last 30 calls</span>
+          <span className="text-sm text-gray-500">Last 50 calls</span>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -274,7 +306,8 @@ async function VoiceDashboard() {
                 recentCalls.map((call) => (
                   <tr key={call.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {call.startedAt.toLocaleString()}
+                      <div>{call.startedAt.toLocaleDateString('en-AU')}</div>
+                      <div className="text-xs text-gray-400">{call.startedAt.toLocaleTimeString('en-AU')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <DirectionBadge direction={call.direction} />
@@ -287,6 +320,11 @@ async function VoiceDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={call.status} blockedBy={call.blockedBy} />
+                      {call.denyReason && (
+                        <div className="text-xs text-red-600 mt-1" title={call.denyReason}>
+                          {call.denyReason.slice(0, 30)}{call.denyReason.length > 30 ? '...' : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDuration(call.durationSeconds)}
