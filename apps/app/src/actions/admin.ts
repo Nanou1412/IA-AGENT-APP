@@ -258,3 +258,115 @@ export async function getAuditLogs(orgId: string, limit = 50) {
 
   return logs;
 }
+
+// ============================================================================
+// Organization Management
+// ============================================================================
+
+export interface CreateOrganizationInput {
+  name: string;
+  industry: string;
+  timezone?: string;
+  ownerEmail: string;
+}
+
+/**
+ * Create a new organization with owner
+ * Creates: Org, OrgSettings, User (if not exists), Membership
+ */
+export async function createOrganization(input: CreateOrganizationInput) {
+  const admin = await requireAdmin();
+
+  const { name, industry, timezone = 'Australia/Sydney', ownerEmail } = input;
+
+  // Validate inputs
+  if (!name || name.trim().length < 2) {
+    return { error: 'Organization name must be at least 2 characters' };
+  }
+
+  if (!industry) {
+    return { error: 'Industry is required' };
+  }
+
+  if (!ownerEmail || !ownerEmail.includes('@')) {
+    return { error: 'Valid owner email is required' };
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Find or create user
+      let user = await tx.user.findUnique({
+        where: { email: ownerEmail.toLowerCase() },
+      });
+
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: ownerEmail.toLowerCase(),
+            name: ownerEmail.split('@')[0],
+          },
+        });
+      }
+
+      // Check if user already has an org
+      const existingMembership = await tx.membership.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (existingMembership) {
+        throw new Error(`User ${ownerEmail} already belongs to an organization`);
+      }
+
+      // Create organization
+      const org = await tx.org.create({
+        data: {
+          name: name.trim(),
+          industry,
+          timezone,
+        },
+      });
+
+      // Create org settings
+      await tx.orgSettings.create({
+        data: {
+          orgId: org.id,
+          sandboxStatus: SandboxStatus.sandbox_required,
+        },
+      });
+
+      // Create owner membership
+      await tx.membership.create({
+        data: {
+          userId: user.id,
+          orgId: org.id,
+          role: 'owner',
+        },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          orgId: org.id,
+          actorUserId: admin.id,
+          action: 'org.created',
+          details: {
+            name: org.name,
+            industry: org.industry,
+            ownerEmail,
+            createdBy: admin.email,
+          },
+        },
+      });
+
+      return { org, user };
+    });
+
+    revalidatePath('/admin/orgs');
+    return { success: true, orgId: result.org.id };
+  } catch (error) {
+    console.error('[createOrganization] Error:', error);
+    return { 
+      error: error instanceof Error ? error.message : 'Failed to create organization' 
+    };
+  }
+}
