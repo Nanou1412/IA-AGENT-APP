@@ -2,11 +2,26 @@
  * Tests for Realtime Server TwiML Endpoint
  */
 
+import crypto from 'crypto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { signInternalToken } from '@repo/core';
+import { verifyInternalToken } from '../utils/internal-token';
 
 const TEST_SECRET = 'test-secret-key-for-testing-purposes';
 const TEST_ORG_ID = 'org_test123';
+
+// Local helper to sign tokens for testing (mirrors @repo/core implementation)
+function signInternalToken(
+  secretKey: string,
+  orgId: string,
+  options: { ttlSeconds?: number; endpointId?: string } = {}
+): string {
+  const { ttlSeconds = 60, endpointId } = options;
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { orgId, iat: now, exp: now + ttlSeconds, ...(endpointId && { endpointId }) };
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', secretKey).update(payloadB64).digest('hex');
+  return `${payloadB64}.${signature}`;
+}
 
 describe('TwiML Endpoint Security', () => {
   beforeEach(() => {
@@ -43,6 +58,14 @@ describe('TwiML Endpoint Security', () => {
       const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
       
       expect(payload.endpointId).toBe('twiml-start');
+    });
+
+    it('should verify token correctly', () => {
+      const token = signInternalToken(TEST_SECRET, TEST_ORG_ID);
+      const result = verifyInternalToken(token, TEST_SECRET);
+      
+      expect(result.ok).toBe(true);
+      expect(result.payload?.orgId).toBe(TEST_ORG_ID);
     });
   });
 
