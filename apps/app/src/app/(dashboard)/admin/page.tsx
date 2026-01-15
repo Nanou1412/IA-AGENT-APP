@@ -70,6 +70,20 @@ export default async function AdminPage() {
             <Button variant="outline" size="sm">Debug Tools</Button>
           </Link>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h3 className="font-semibold mb-2">💬 Conversations</h3>
+          <p className="text-sm text-gray-600 mb-4">View all conversation sessions and history.</p>
+          <Link href="/admin/conversations">
+            <Button variant="outline" size="sm">View Conversations</Button>
+          </Link>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h3 className="font-semibold mb-2">🚨 Kill Switches</h3>
+          <p className="text-sm text-gray-600 mb-4">Emergency controls to disable features.</p>
+          <Link href="/admin/kill-switches">
+            <Button variant="outline" size="sm">Manage Switches</Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
