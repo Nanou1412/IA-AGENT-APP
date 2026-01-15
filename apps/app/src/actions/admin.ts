@@ -619,3 +619,156 @@ export async function getAvailableTemplates() {
 
   return Object.values(latestTemplates);
 }
+
+// ============================================================================
+// User Management
+// ============================================================================
+
+export interface AddUserToOrgInput {
+  userId: string;
+  orgId: string;
+  role: 'owner' | 'manager' | 'staff';
+}
+
+/**
+ * Add a user to an organization
+ */
+export async function addUserToOrg(input: AddUserToOrgInput) {
+  const admin = await requireAdmin();
+
+  const { userId, orgId, role } = input;
+
+  // Validate inputs
+  if (!userId || !orgId || !role) {
+    return { error: 'All fields are required' };
+  }
+
+  const validRoles = ['owner', 'manager', 'staff'];
+  if (!validRoles.includes(role)) {
+    return { error: 'Invalid role' };
+  }
+
+  try {
+    // Check user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { error: 'User not found' };
+    }
+
+    // Check org exists
+    const org = await prisma.org.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      return { error: 'Organization not found' };
+    }
+
+    // Check if membership already exists
+    const existingMembership = await prisma.membership.findUnique({
+      where: {
+        userId_orgId: {
+          userId,
+          orgId,
+        },
+      },
+    });
+
+    if (existingMembership) {
+      return { error: 'User is already a member of this organization' };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.membership.create({
+        data: {
+          userId,
+          orgId,
+          role,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          orgId,
+          actorUserId: admin.id,
+          action: 'membership.created',
+          details: {
+            userId,
+            userEmail: user.email,
+            role,
+          },
+        },
+      });
+    });
+
+    revalidatePath(`/admin/users/${userId}`);
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[addUserToOrg] Error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Failed to add user to organization',
+    };
+  }
+}
+
+/**
+ * Remove a user from an organization
+ */
+export async function removeUserFromOrg(userId: string, orgId: string) {
+  const admin = await requireAdmin();
+
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_orgId: {
+          userId,
+          orgId,
+        },
+      },
+      include: {
+        user: { select: { email: true } },
+      },
+    });
+
+    if (!membership) {
+      return { error: 'Membership not found' };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.membership.delete({
+        where: {
+          userId_orgId: {
+            userId,
+            orgId,
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          orgId,
+          actorUserId: admin.id,
+          action: 'membership.removed',
+          details: {
+            userId,
+            userEmail: membership.user.email,
+            previousRole: membership.role,
+          },
+        },
+      });
+    });
+
+    revalidatePath(`/admin/users/${userId}`);
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[removeUserFromOrg] Error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Failed to remove user from organization',
+    };
+  }
+}

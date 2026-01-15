@@ -51,8 +51,10 @@ export default async function AdminPage() {
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="font-semibold mb-2">👤 Users</h3>
-          <p className="text-sm text-gray-600 mb-4">Manage user accounts.</p>
-          <Button variant="outline" size="sm" disabled>Coming Soon</Button>
+          <p className="text-sm text-gray-600 mb-4">Manage user accounts and memberships.</p>
+          <Link href="/admin/users">
+            <Button variant="outline" size="sm">View Users</Button>
+          </Link>
         </div>
       </div>
     </div>
