@@ -21,8 +21,8 @@ RUN pnpm --filter @repo/realtime-server build
 # Verify the build output exists
 RUN ls -la /app/apps/realtime-server/dist/
 
-# Prune to production dependencies only and deploy
-RUN pnpm --filter @repo/realtime-server deploy --prod /app/pruned
+# Prune to production dependencies only and deploy (--legacy for pnpm v10+)
+RUN pnpm --filter @repo/realtime-server deploy --prod --legacy /app/pruned
 
 # ============================================================================
 # Production image (minimal)
