@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/session';
 import { OrgActions } from '@/components/org-actions';
+import { TwilioConfigForm } from '@/components/twilio-config-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,12 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
     orderBy: { createdAt: 'desc' },
     take: 10,
   });
+
+  // Get Twilio channel endpoints
+  const channelEndpoints = await prisma.channelEndpoint.findMany({
+    where: { orgId: org.id },
+  });
+  const voiceEndpoint = channelEndpoints.find(e => e.channel === 'voice');
 
   return (
     <div>
@@ -148,6 +155,22 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
               pendingAssignmentId={pendingAssignment?.id}
             />
           </div>
+        </div>
+
+        {/* Twilio Configuration */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="font-semibold mb-4">📞 Twilio Configuration</h3>
+          <TwilioConfigForm
+            orgId={org.id}
+            initialData={{
+              twilioPhoneNumber: voiceEndpoint?.twilioPhoneNumber,
+              voiceEnabled: settings?.voiceEnabled ?? false,
+              smsEnabled: settings?.smsEnabled ?? false,
+              whatsappEnabled: settings?.whatsappEnabled ?? false,
+              callWelcomeText: settings?.callWelcomeText ?? undefined,
+              handoffPhone: settings?.handoffPhone ?? undefined,
+            }}
+          />
         </div>
 
         {/* Onboarding Steps */}
