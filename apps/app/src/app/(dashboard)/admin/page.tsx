@@ -82,6 +82,13 @@ export default async function AdminPage() {
             <Button variant="primary" size="sm">View Orgs</Button>
           </Link>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-blue-200 bg-blue-50">
+          <h3 className="font-semibold mb-2">📞 Endpoints</h3>
+          <p className="text-sm text-gray-600 mb-4">Twilio phone → org routing.</p>
+          <Link href="/admin/endpoints">
+            <Button variant="primary" size="sm">Manage Routing</Button>
+          </Link>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="font-semibold mb-2">🏭 Industries</h3>
           <p className="text-sm text-gray-600 mb-4">Industry configurations and rules.</p>
