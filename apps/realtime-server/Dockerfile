@@ -21,6 +21,9 @@ RUN pnpm --filter @repo/realtime-server build
 # Verify the build output exists
 RUN ls -la /app/apps/realtime-server/dist/
 
+# Prune to production dependencies only and deploy
+RUN pnpm --filter @repo/realtime-server deploy --prod /app/pruned
+
 # ============================================================================
 # Production image (minimal)
 # ============================================================================
@@ -28,12 +31,10 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy built dist from builder
-COPY --from=builder /app/apps/realtime-server/dist ./dist
-COPY --from=builder /app/apps/realtime-server/package.json ./
-
-# Install production dependencies only (standalone, no pnpm needed)
-RUN npm install --omit=dev --ignore-scripts
+# Copy the pruned production-ready app (includes node_modules and dist)
+COPY --from=builder /app/pruned/dist ./dist
+COPY --from=builder /app/pruned/node_modules ./node_modules
+COPY --from=builder /app/pruned/package.json ./
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
