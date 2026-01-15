@@ -7,6 +7,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/session';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { AddUserToOrgForm } from '@/components/add-user-to-org-form';
 
@@ -32,7 +33,7 @@ async function getUser(userId: string) {
         take: 5,
       },
       accounts: {
-        select: { provider: true, createdAt: true },
+        select: { provider: true, type: true },
       },
     },
   });
@@ -94,10 +95,12 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
         <div className="flex items-start gap-4">
           {user.image ? (
-            <img
+            <Image
               src={user.image}
               alt={user.name || 'User'}
-              className="h-16 w-16 rounded-full"
+              width={64}
+              height={64}
+              className="rounded-full"
             />
           ) : (
             <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
@@ -138,7 +141,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
               <div key={index} className="flex items-center gap-3 text-sm">
                 <span className="capitalize font-medium">{account.provider}</span>
                 <span className="text-gray-500">
-                  Linked {new Date(account.createdAt).toLocaleDateString('en-AU')}
+                  Type: {account.type}
                 </span>
               </div>
             ))}
