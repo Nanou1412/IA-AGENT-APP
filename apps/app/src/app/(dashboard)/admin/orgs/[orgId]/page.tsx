@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/session';
 import { OrgActions } from '@/components/org-actions';
 import { TwilioConfigForm } from '@/components/twilio-config-form';
+import { TemplateAssignmentForm } from '@/components/template-assignment-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,23 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
     where: { orgId: org.id },
   });
   const voiceEndpoint = channelEndpoints.find(e => e.channel === 'voice');
+
+  // Get available templates for assignment
+  const allTemplates = await prisma.agentTemplate.findMany({
+    orderBy: [{ slug: 'asc' }, { version: 'desc' }],
+  });
+  // Get latest version of each template
+  const availableTemplates = Object.values(
+    allTemplates.reduce((acc, template) => {
+      if (!acc[template.slug]) {
+        acc[template.slug] = template;
+      }
+      return acc;
+    }, {} as Record<string, typeof allTemplates[0]>)
+  );
+
+  // Get current active assignment
+  const activeAssignment = org.assignments.find(a => a.status === 'active');
 
   return (
     <div>
@@ -213,36 +231,50 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
 
         {/* Assignments */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="font-semibold mb-4">Template Assignments</h3>
-          {org.assignments.length > 0 ? (
-            <ul className="space-y-3">
-              {org.assignments.map((a: { id: string; template: { title: string; slug: string }; templateVersion: string; status: string }) => (
-                <li
-                  key={a.id}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded"
-                >
-                  <div>
-                    <div className="font-medium">{a.template.title}</div>
-                    <div className="text-sm text-gray-500">
-                      {a.template.slug}@{a.templateVersion}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      a.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : a.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
+          <h3 className="font-semibold mb-4">🤖 Agent Template</h3>
+          <TemplateAssignmentForm
+            orgId={org.id}
+            currentTemplateSlug={activeAssignment?.template.slug}
+            currentTemplateVersion={activeAssignment?.templateVersion}
+            availableTemplates={availableTemplates.map(t => ({
+              id: t.id,
+              slug: t.slug,
+              version: t.version,
+              title: t.title,
+            }))}
+          />
+          
+          {/* Assignment History */}
+          {org.assignments.length > 0 && (
+            <div className="mt-6 pt-4 border-t">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Assignment History</h4>
+              <ul className="space-y-2">
+                {org.assignments.map((a: { id: string; template: { title: string; slug: string }; templateVersion: string; status: string }) => (
+                  <li
+                    key={a.id}
+                    className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"
                   >
-                    {a.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No template assignments</p>
+                    <div>
+                      <span className="font-medium">{a.template.title}</span>
+                      <span className="text-gray-500 ml-2">
+                        ({a.template.slug}@{a.templateVersion})
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        a.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : a.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {a.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 
