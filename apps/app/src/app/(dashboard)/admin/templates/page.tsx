@@ -16,9 +16,17 @@ export default async function AdminTemplatesPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Agent Templates</h1>
-        <p className="text-gray-600">Manage versioned agent templates for each industry.</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Agent Templates</h1>
+          <p className="text-gray-600">Manage versioned agent templates for each industry.</p>
+        </div>
+        <Link
+          href="/admin/templates/new"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        >
+          + Create Template
+        </Link>
       </div>
 
       {/* Summary Cards */}

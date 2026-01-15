@@ -620,6 +620,86 @@ export async function getAvailableTemplates() {
   return Object.values(latestTemplates);
 }
 
+export interface CreateTemplateInput {
+  slug: string;
+  version: string;
+  title: string;
+  systemPrompt: string;
+  intentsAllowed: string[];
+  modulesDefault: string[];
+  handoffTriggers: string[];
+}
+
+/**
+ * Create a new agent template
+ */
+export async function createTemplate(input: CreateTemplateInput) {
+  const admin = await requireAdmin();
+
+  const { slug, version, title, systemPrompt, intentsAllowed, modulesDefault, handoffTriggers } = input;
+
+  // Validate inputs
+  if (!slug || !version || !title || !systemPrompt) {
+    return { error: 'Slug, version, title, and system prompt are required' };
+  }
+
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    return { error: 'Slug must be lowercase alphanumeric with hyphens only' };
+  }
+
+  // Check if this slug+version already exists
+  const existing = await prisma.agentTemplate.findUnique({
+    where: {
+      slug_version: {
+        slug,
+        version,
+      },
+    },
+  });
+
+  if (existing) {
+    return { error: `Template ${slug} v${version} already exists` };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.agentTemplate.create({
+        data: {
+          slug,
+          version,
+          title,
+          systemPrompt,
+          intentsAllowed,
+          modulesDefault,
+          handoffTriggers,
+          settingsSchema: {},
+          definition: {},
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: admin.id,
+          action: 'template.created',
+          details: {
+            slug,
+            version,
+            title,
+          },
+        },
+      });
+    });
+
+    revalidatePath('/admin/templates');
+    return { success: true };
+  } catch (error) {
+    console.error('[createTemplate] Error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Failed to create template',
+    };
+  }
+}
+
 // ============================================================================
 // User Management
 // ============================================================================
