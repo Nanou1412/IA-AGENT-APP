@@ -514,3 +514,108 @@ export async function updateOrgTwilioConfig(
     };
   }
 }
+
+// ============================================================================
+// Template Assignment
+// ============================================================================
+
+/**
+ * Assign a template to an organization
+ * Creates a new AgentAssignment with 'active' status
+ * Deactivates any existing active assignments
+ */
+export async function assignTemplateToOrg(
+  orgId: string,
+  templateSlug: string,
+  templateVersion?: string
+) {
+  const admin = await requireAdmin();
+
+  try {
+    // Find the template
+    const template = await prisma.agentTemplate.findFirst({
+      where: {
+        slug: templateSlug,
+        ...(templateVersion ? { version: templateVersion } : {}),
+      },
+      orderBy: { createdAt: 'desc' }, // Get latest version if not specified
+    });
+
+    if (!template) {
+      return { error: `Template "${templateSlug}" not found` };
+    }
+
+    // Check org exists
+    const org = await prisma.org.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      return { error: 'Organisation not found' };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Deactivate existing active assignments
+      await tx.agentAssignment.updateMany({
+        where: {
+          orgId,
+          status: 'active',
+        },
+        data: { status: 'rolled_back' },
+      });
+
+      // Create new assignment as active
+      await tx.agentAssignment.create({
+        data: {
+          orgId,
+          templateId: template.id,
+          templateVersion: template.version,
+          status: 'active',
+        },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          orgId,
+          actorUserId: admin.id,
+          action: 'template.assigned',
+          details: {
+            templateSlug: template.slug,
+            templateVersion: template.version,
+            templateTitle: template.title,
+          },
+        },
+      });
+    });
+
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[assignTemplateToOrg] Error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Failed to assign template',
+    };
+  }
+}
+
+/**
+ * Get all available templates
+ */
+export async function getAvailableTemplates() {
+  await requireAdmin();
+
+  const templates = await prisma.agentTemplate.findMany({
+    orderBy: [{ slug: 'asc' }, { version: 'desc' }],
+  });
+
+  // Group by slug and get latest version of each
+  const latestTemplates = templates.reduce((acc, template) => {
+    if (!acc[template.slug]) {
+      acc[template.slug] = template;
+    }
+    return acc;
+  }, {} as Record<string, typeof templates[0]>);
+
+  return Object.values(latestTemplates);
+}
