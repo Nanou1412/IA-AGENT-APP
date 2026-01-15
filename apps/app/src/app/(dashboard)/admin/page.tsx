@@ -124,6 +124,13 @@ export default async function AdminPage() {
             <Button variant="outline" size="sm">View Users</Button>
           </Link>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-green-200 bg-green-50">
+          <h3 className="font-semibold mb-2">📊 Usage & Costs</h3>
+          <p className="text-sm text-gray-600 mb-4">Monitor costs, budgets, and consumption.</p>
+          <Link href="/admin/usage">
+            <Button variant="primary" size="sm">View Usage</Button>
+          </Link>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="font-semibold mb-2">📋 Audit Logs</h3>
           <p className="text-sm text-gray-600 mb-4">System activity and action history.</p>
