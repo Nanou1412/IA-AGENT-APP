@@ -370,3 +370,147 @@ export async function createOrganization(input: CreateOrganizationInput) {
     };
   }
 }
+
+// ============================================================================
+// Twilio & Voice Configuration
+// ============================================================================
+
+export interface UpdateOrgTwilioConfigInput {
+  twilioPhoneNumber?: string;
+  voiceEnabled?: boolean;
+  smsEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  callWelcomeText?: string;
+  handoffPhone?: string;
+}
+
+/**
+ * Update Twilio and voice configuration for an org
+ */
+export async function updateOrgTwilioConfig(
+  orgId: string,
+  input: UpdateOrgTwilioConfigInput
+) {
+  const admin = await requireAdmin();
+
+  // Validate phone number format if provided
+  if (input.twilioPhoneNumber && !input.twilioPhoneNumber.match(/^\+[1-9]\d{6,14}$/)) {
+    return { error: 'Invalid phone number format. Must be E.164 format (e.g., +61485000807)' };
+  }
+
+  try {
+    // Get org to verify it exists
+    const org = await prisma.org.findUnique({
+      where: { id: orgId },
+      include: { settings: true },
+    });
+
+    if (!org) {
+      return { error: 'Organisation not found' };
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {};
+    
+    if (input.voiceEnabled !== undefined) {
+      updateData.voiceEnabled = input.voiceEnabled;
+    }
+    if (input.smsEnabled !== undefined) {
+      updateData.smsEnabled = input.smsEnabled;
+    }
+    if (input.whatsappEnabled !== undefined) {
+      updateData.whatsappEnabled = input.whatsappEnabled;
+    }
+    if (input.callWelcomeText !== undefined) {
+      updateData.callWelcomeText = input.callWelcomeText;
+    }
+    if (input.handoffPhone !== undefined) {
+      updateData.handoffPhone = input.handoffPhone;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Update OrgSettings
+      if (Object.keys(updateData).length > 0) {
+        await tx.orgSettings.update({
+          where: { orgId },
+          data: updateData,
+        });
+      }
+
+      // Handle Twilio phone number - create or update ChannelEndpoint
+      if (input.twilioPhoneNumber) {
+        // Check if this number is already assigned to another org
+        const existingEndpoint = await tx.channelEndpoint.findFirst({
+          where: {
+            twilioPhoneNumber: input.twilioPhoneNumber,
+            NOT: { orgId },
+          },
+        });
+
+        if (existingEndpoint) {
+          throw new Error(`Phone number ${input.twilioPhoneNumber} is already assigned to another organisation`);
+        }
+
+        // Upsert voice endpoint
+        await tx.channelEndpoint.upsert({
+          where: {
+            channel_twilioPhoneNumber: {
+              channel: 'voice',
+              twilioPhoneNumber: input.twilioPhoneNumber,
+            },
+          },
+          create: {
+            orgId,
+            channel: 'voice',
+            twilioPhoneNumber: input.twilioPhoneNumber,
+            friendlyName: `Voice - ${input.twilioPhoneNumber}`,
+          },
+          update: {
+            orgId,
+            isActive: true,
+          },
+        });
+
+        // Also create SMS endpoint if SMS is enabled
+        if (input.smsEnabled) {
+          await tx.channelEndpoint.upsert({
+            where: {
+              channel_twilioPhoneNumber: {
+                channel: 'sms',
+                twilioPhoneNumber: input.twilioPhoneNumber,
+              },
+            },
+            create: {
+              orgId,
+              channel: 'sms',
+              twilioPhoneNumber: input.twilioPhoneNumber,
+              friendlyName: `SMS - ${input.twilioPhoneNumber}`,
+            },
+            update: {
+              orgId,
+              isActive: true,
+            },
+          });
+        }
+      }
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          orgId,
+          actorUserId: admin.id,
+          action: 'org.twilio_config_updated',
+          details: JSON.parse(JSON.stringify(input)),
+        },
+      });
+    });
+
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[updateOrgTwilioConfig] Error:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update Twilio configuration',
+    };
+  }
+}
