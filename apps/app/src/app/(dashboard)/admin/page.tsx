@@ -89,6 +89,13 @@ export default async function AdminPage() {
             <Button variant="primary" size="sm">Manage Routing</Button>
           </Link>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-orange-200 bg-orange-50">
+          <h3 className="font-semibold mb-2">🛒 Orders</h3>
+          <p className="text-sm text-gray-600 mb-4">View all orders across orgs.</p>
+          <Link href="/admin/orders">
+            <Button variant="primary" size="sm">View Orders</Button>
+          </Link>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="font-semibold mb-2">🏭 Industries</h3>
           <p className="text-sm text-gray-600 mb-4">Industry configurations and rules.</p>
