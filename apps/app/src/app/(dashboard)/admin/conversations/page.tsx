@@ -217,7 +217,8 @@ export default async function ConversationsAdminPage({
                 <tbody className="divide-y">
                   {sessions.map((session) => {
                     const lastTurn = session.turns[0];
-                    const lastRun = session.engineRuns[0];
+                    const _lastRun = session.engineRuns[0];
+                    void _lastRun; // Available for future use
                     return (
                       <tr key={session.id} className="hover:bg-gray-50">
                         <td className="p-3">

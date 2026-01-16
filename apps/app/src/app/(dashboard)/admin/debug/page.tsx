@@ -18,7 +18,7 @@ export default async function DebugPage() {
   // Get system stats
   const now = new Date();
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // Available for future use
 
   const [
     totalOrgs,
@@ -35,8 +35,8 @@ export default async function DebugPage() {
     recentCalls,
     totalOrders,
     recentOrders,
-    stripeEvents,
-    recentStripeEvents,
+    _stripeEvents,
+    _recentStripeEvents,
     auditLogs,
     recentAuditLogs,
   ] = await Promise.all([
