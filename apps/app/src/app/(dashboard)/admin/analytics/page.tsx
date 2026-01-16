@@ -10,6 +10,7 @@
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { StatCard } from "@/components/ui/admin-card";
 
 export const metadata = {
   title: "Analytics - Admin",
@@ -122,25 +123,38 @@ export default async function AdminAnalyticsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">📈 Analytics Dashboard</h1>
-          <p className="text-gray-500">
+          <h1 className="text-3xl font-bold text-gray-900">📈 Analytics Dashboard</h1>
+          <p className="text-gray-500 mt-1">
             Last {range} days • {days[0]?.date} to {days[days.length - 1]?.date}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/analytics?range=7d"
-            className={`px-3 py-1 rounded text-sm ${range === 7 ? "bg-blue-600 text-white" : "border hover:bg-gray-50"}`}
+        <div className="flex items-center gap-2">
+          <div className="bg-white rounded-lg border border-gray-200 p-1 flex">
+            <Link
+              href="/admin/analytics?range=7d"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                range === 7 
+                  ? "bg-blue-600 text-white shadow-sm" 
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              7 days
+            </Link>
+            <Link
+              href="/admin/analytics?range=30d"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                range === 30 
+                  ? "bg-blue-600 text-white shadow-sm" 
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              30 days
+            </Link>
+          </div>
+          <Link 
+            href="/admin" 
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            7 jours
-          </Link>
-          <Link
-            href="/admin/analytics?range=30d"
-            className={`px-3 py-1 rounded text-sm ${range === 30 ? "bg-blue-600 text-white" : "border hover:bg-gray-50"}`}
-          >
-            30 jours
-          </Link>
-          <Link href="/admin" className="px-3 py-1 border rounded text-sm hover:bg-gray-50 ml-4">
             ← Admin
           </Link>
         </div>
@@ -148,210 +162,217 @@ export default async function AdminAnalyticsPage({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Total Sessions</p>
-          <p className="text-2xl font-bold">{totals.sessions.toLocaleString()}</p>
-          <p className="text-xs text-gray-400">~{avgPerDay.sessions}/day</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Total Messages</p>
-          <p className="text-2xl font-bold">{totals.messages.toLocaleString()}</p>
-          <p className="text-xs text-gray-400">~{avgPerDay.messages}/day</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Total Orders</p>
-          <p className="text-2xl font-bold">{totals.orders.toLocaleString()}</p>
-          <p className="text-xs text-gray-400">~{avgPerDay.orders}/day</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Paid Orders</p>
-          <p className="text-2xl font-bold text-green-600">{totals.paidOrders.toLocaleString()}</p>
-          <p className="text-xs text-gray-400">{orderToPaidRate}% conversion</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">AI Cost</p>
-          <p className="text-2xl font-bold text-blue-600">${totals.aiCost.toFixed(2)}</p>
-          <p className="text-xs text-gray-400">~${avgPerDay.aiCost}/day</p>
-        </div>
+        <StatCard
+          title="Total Sessions"
+          value={totals.sessions}
+          subtitle={`~${avgPerDay.sessions}/day`}
+          icon="💬"
+        />
+        <StatCard
+          title="Total Messages"
+          value={totals.messages}
+          subtitle={`~${avgPerDay.messages}/day`}
+          icon="📨"
+        />
+        <StatCard
+          title="Total Orders"
+          value={totals.orders}
+          subtitle={`~${avgPerDay.orders}/day`}
+          icon="🛒"
+        />
+        <StatCard
+          title="Paid Orders"
+          value={totals.paidOrders}
+          subtitle={`${orderToPaidRate}% conversion`}
+          icon="💰"
+          variant="success"
+        />
+        <StatCard
+          title="AI Cost"
+          value={`$${totals.aiCost.toFixed(2)}`}
+          subtitle={`~$${avgPerDay.aiCost}/day`}
+          icon="🤖"
+          variant="info"
+        />
       </div>
 
       {/* Funnel */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold mb-4">🔽 Conversion Funnel</h2>
-        <div className="flex items-center justify-center gap-4">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <h2 className="font-semibold text-gray-900 mb-6">🔽 Conversion Funnel</h2>
+        <div className="flex items-center justify-center gap-6">
           <div className="text-center">
-            <div className="bg-blue-100 text-blue-800 rounded-lg px-6 py-4 min-w-[120px]">
-              <p className="text-2xl font-bold">{totals.sessions.toLocaleString()}</p>
-              <p className="text-xs">Sessions</p>
+            <div className="bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-800 rounded-xl px-8 py-5 min-w-[140px] border border-blue-200">
+              <p className="text-3xl font-bold">{totals.sessions.toLocaleString()}</p>
+              <p className="text-sm font-medium mt-1">Sessions</p>
             </div>
           </div>
           <div className="text-center">
-            <div className="text-gray-400">→</div>
-            <div className="text-xs text-gray-500">{sessionToOrderRate}%</div>
+            <div className="text-2xl text-gray-300">→</div>
+            <div className="text-sm font-medium text-blue-600 mt-1">{sessionToOrderRate}%</div>
           </div>
           <div className="text-center">
-            <div className="bg-yellow-100 text-yellow-800 rounded-lg px-6 py-4 min-w-[120px]">
-              <p className="text-2xl font-bold">{totals.orders.toLocaleString()}</p>
-              <p className="text-xs">Orders</p>
+            <div className="bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-800 rounded-xl px-8 py-5 min-w-[140px] border border-amber-200">
+              <p className="text-3xl font-bold">{totals.orders.toLocaleString()}</p>
+              <p className="text-sm font-medium mt-1">Orders</p>
             </div>
           </div>
           <div className="text-center">
-            <div className="text-gray-400">→</div>
-            <div className="text-xs text-gray-500">{orderToPaidRate}%</div>
+            <div className="text-2xl text-gray-300">→</div>
+            <div className="text-sm font-medium text-amber-600 mt-1">{orderToPaidRate}%</div>
           </div>
           <div className="text-center">
-            <div className="bg-green-100 text-green-800 rounded-lg px-6 py-4 min-w-[120px]">
-              <p className="text-2xl font-bold">{totals.paidOrders.toLocaleString()}</p>
-              <p className="text-xs">Paid</p>
+            <div className="bg-gradient-to-br from-emerald-100 to-green-100 text-emerald-800 rounded-xl px-8 py-5 min-w-[140px] border border-emerald-200">
+              <p className="text-3xl font-bold">{totals.paidOrders.toLocaleString()}</p>
+              <p className="text-sm font-medium mt-1">Paid</p>
             </div>
           </div>
         </div>
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Overall conversion: <span className="font-medium">{sessionToPaidRate}%</span> sessions → paid orders
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Overall conversion: <span className="font-semibold text-gray-700">{sessionToPaidRate}%</span> sessions → paid orders
         </p>
       </div>
 
       {/* Sessions Chart */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold mb-4">📊 Daily Sessions</h2>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <h2 className="font-semibold text-gray-900 mb-4">📊 Daily Sessions</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
               key={day.date}
-              className="flex-1 bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer group relative"
+              className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t hover:from-blue-600 hover:to-blue-500 transition-all cursor-pointer group relative"
               style={{ height: `${(day.sessions / maxSessions) * 100}%`, minHeight: day.sessions > 0 ? "4px" : "0" }}
               title={`${day.date}: ${day.sessions} sessions`}
             >
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
                 {day.date.slice(5)}: {day.sessions}
               </div>
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
           <span>{days[0]?.date.slice(5)}</span>
           <span>{days[days.length - 1]?.date.slice(5)}</span>
         </div>
       </div>
 
       {/* Messages Chart */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold mb-4">💬 Daily Messages</h2>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <h2 className="font-semibold text-gray-900 mb-4">💬 Daily Messages</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
               key={day.date}
-              className="flex-1 bg-purple-500 rounded-t hover:bg-purple-600 transition-colors cursor-pointer group relative"
+              className="flex-1 bg-gradient-to-t from-purple-500 to-purple-400 rounded-t hover:from-purple-600 hover:to-purple-500 transition-all cursor-pointer group relative"
               style={{ height: `${(day.messages / maxMessages) * 100}%`, minHeight: day.messages > 0 ? "4px" : "0" }}
               title={`${day.date}: ${day.messages} messages`}
             >
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
                 {day.date.slice(5)}: {day.messages}
               </div>
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
           <span>{days[0]?.date.slice(5)}</span>
           <span>{days[days.length - 1]?.date.slice(5)}</span>
         </div>
       </div>
 
       {/* Orders Chart */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold mb-4">🛒 Daily Orders</h2>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <h2 className="font-semibold text-gray-900 mb-4">🛒 Daily Orders</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div key={day.date} className="flex-1 relative group">
               {/* All orders */}
               <div
-                className="bg-yellow-400 rounded-t absolute bottom-0 left-0 right-0 hover:bg-yellow-500 transition-colors"
+                className="bg-gradient-to-t from-amber-400 to-amber-300 rounded-t absolute bottom-0 left-0 right-0 hover:from-amber-500 hover:to-amber-400 transition-all"
                 style={{ height: `${(day.orders / maxOrders) * 100}%`, minHeight: day.orders > 0 ? "4px" : "0" }}
               />
               {/* Paid orders overlay */}
               <div
-                className="bg-green-500 rounded-t absolute bottom-0 left-0 right-0"
+                className="bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t absolute bottom-0 left-0 right-0"
                 style={{ height: `${(day.paidOrders / maxOrders) * 100}%`, minHeight: day.paidOrders > 0 ? "4px" : "0" }}
               />
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
                 {day.date.slice(5)}: {day.paidOrders}/{day.orders}
               </div>
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
           <span>{days[0]?.date.slice(5)}</span>
           <span className="flex gap-4">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-yellow-400 rounded"></span> Orders</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded"></span> Paid</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-400 rounded"></span> Orders</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-emerald-500 rounded"></span> Paid</span>
           </span>
           <span>{days[days.length - 1]?.date.slice(5)}</span>
         </div>
       </div>
 
       {/* AI Cost Chart */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold mb-4">💰 Daily AI Cost</h2>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <h2 className="font-semibold text-gray-900 mb-4">💰 Daily AI Cost</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
               key={day.date}
-              className="flex-1 bg-orange-500 rounded-t hover:bg-orange-600 transition-colors cursor-pointer group relative"
+              className="flex-1 bg-gradient-to-t from-orange-500 to-orange-400 rounded-t hover:from-orange-600 hover:to-orange-500 transition-all cursor-pointer group relative"
               style={{ height: `${(day.aiCost / maxCost) * 100}%`, minHeight: day.aiCost > 0 ? "4px" : "0" }}
               title={`${day.date}: $${day.aiCost.toFixed(2)}`}
             >
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
                 {day.date.slice(5)}: ${day.aiCost.toFixed(2)}
               </div>
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
           <span>{days[0]?.date.slice(5)}</span>
           <span>{days[days.length - 1]?.date.slice(5)}</span>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold">📋 Daily Breakdown</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-5 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">📋 Daily Breakdown</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium">Date</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">Sessions</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">Messages</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">Calls</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">Orders</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">Paid</th>
-                <th className="px-4 py-2 text-right text-sm font-medium">AI Cost</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Sessions</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Messages</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Calls</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Orders</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">AI Cost</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-gray-100">
               {days.slice().reverse().map((day) => (
-                <tr key={day.date} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-sm font-medium">{day.date}</td>
-                  <td className="px-4 py-2 text-sm text-right">{day.sessions}</td>
-                  <td className="px-4 py-2 text-sm text-right">{day.messages}</td>
-                  <td className="px-4 py-2 text-sm text-right">{day.calls}</td>
-                  <td className="px-4 py-2 text-sm text-right">{day.orders}</td>
-                  <td className="px-4 py-2 text-sm text-right text-green-600">{day.paidOrders}</td>
-                  <td className="px-4 py-2 text-sm text-right">${day.aiCost.toFixed(2)}</td>
+                <tr key={day.date} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{day.date}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.sessions}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.messages}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.calls}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.orders}</td>
+                  <td className="px-4 py-3 text-sm text-right text-emerald-600 font-medium">{day.paidOrders}</td>
+                  <td className="px-4 py-3 text-sm text-right font-mono">${day.aiCost.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-100 font-medium">
-              <tr>
-                <td className="px-4 py-2 text-sm">Total</td>
-                <td className="px-4 py-2 text-sm text-right">{totals.sessions}</td>
-                <td className="px-4 py-2 text-sm text-right">{totals.messages}</td>
-                <td className="px-4 py-2 text-sm text-right">{totals.calls}</td>
-                <td className="px-4 py-2 text-sm text-right">{totals.orders}</td>
-                <td className="px-4 py-2 text-sm text-right text-green-600">{totals.paidOrders}</td>
-                <td className="px-4 py-2 text-sm text-right">${totals.aiCost.toFixed(2)}</td>
+            <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tr className="font-semibold">
+                <td className="px-4 py-3 text-sm text-gray-900">Total</td>
+                <td className="px-4 py-3 text-sm text-right">{totals.sessions}</td>
+                <td className="px-4 py-3 text-sm text-right">{totals.messages}</td>
+                <td className="px-4 py-3 text-sm text-right">{totals.calls}</td>
+                <td className="px-4 py-3 text-sm text-right">{totals.orders}</td>
+                <td className="px-4 py-3 text-sm text-right text-emerald-600">{totals.paidOrders}</td>
+                <td className="px-4 py-3 text-sm text-right font-mono">${totals.aiCost.toFixed(2)}</td>
               </tr>
             </tfoot>
           </table>

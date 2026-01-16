@@ -7,6 +7,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { StatCard } from "@/components/ui/admin-card";
+import { TableContainer } from "@/components/ui/admin-table";
 
 export const metadata = {
   title: "Usage & Costs - Admin",
@@ -112,25 +114,28 @@ export default async function UsagePage({
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">📊 Usage & Costs</h1>
-          <p className="text-gray-500">Monitor costs, budgets, and resource consumption</p>
+          <h1 className="text-3xl font-bold text-gray-900">📊 Usage & Costs</h1>
+          <p className="text-gray-500 mt-1">Monitor costs, budgets, and resource consumption</p>
         </div>
-        <Link href="/admin" className="text-blue-600 hover:text-blue-800">
-          ← Back
+        <Link 
+          href="/admin" 
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          ← Back to Admin
         </Link>
       </div>
 
       {/* Month Selector */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <form className="flex items-center gap-4">
-          <label className="text-sm font-medium">Period:</label>
+          <label className="text-sm font-medium text-gray-700">Period:</label>
           <select
             name="month"
             defaultValue={currentMonth}
-            className="border rounded px-3 py-2"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             onChange={(e) => {
               const form = e.target.form;
               if (form) form.submit();
@@ -149,58 +154,70 @@ export default async function UsagePage({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">Total Cost (MTD)</p>
-          <p className="text-2xl font-bold">${totalCost.toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">Cost 24h</p>
-          <p className="text-2xl font-bold text-blue-600">${cost24h.toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">AI Cost</p>
-          <p className="text-2xl font-bold text-purple-600">${totalAiCost.toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">Twilio Cost</p>
-          <p className="text-2xl font-bold text-green-600">${totalTwilioCost.toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">Tokens (MTD)</p>
-          <p className="text-2xl font-bold">{(totalTokens / 1000).toFixed(1)}K</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">SMS Count</p>
-          <p className="text-2xl font-bold">{totalSms}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs text-gray-500">Voice Minutes</p>
-          <p className="text-2xl font-bold">{totalVoiceMinutes.toFixed(1)}</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <StatCard
+          title="Total Cost (MTD)"
+          value={`$${totalCost.toFixed(2)}`}
+          icon="💵"
+        />
+        <StatCard
+          title="Cost 24h"
+          value={`$${cost24h.toFixed(2)}`}
+          icon="⏰"
+          variant="info"
+        />
+        <StatCard
+          title="AI Cost"
+          value={`$${totalAiCost.toFixed(2)}`}
+          icon="🤖"
+          variant="purple"
+        />
+        <StatCard
+          title="Twilio Cost"
+          value={`$${totalTwilioCost.toFixed(2)}`}
+          icon="📞"
+          variant="success"
+        />
+        <StatCard
+          title="Tokens (MTD)"
+          value={`${(totalTokens / 1000).toFixed(1)}K`}
+          icon="🔤"
+        />
+        <StatCard
+          title="SMS Count"
+          value={totalSms}
+          icon="💬"
+        />
+        <StatCard
+          title="Voice Minutes"
+          value={totalVoiceMinutes.toFixed(1)}
+          icon="🎙️"
+        />
       </div>
 
       {/* Budget Alerts */}
       {budgetAlerts.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-          <h3 className="font-medium text-red-800 mb-2">⚠️ Budget Alerts</h3>
+        <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-5">
+          <h3 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+            <span>⚠️</span> Budget Alerts
+          </h3>
           <div className="space-y-2">
             {budgetAlerts.map((alert) => alert && (
-              <div key={alert.orgId} className="flex items-center justify-between">
+              <div key={alert.orgId} className="flex items-center justify-between bg-white/60 rounded-lg px-4 py-2">
                 <Link
-                  href={`/admin/usage/${alert.orgId}`}
-                  className="text-red-700 hover:underline"
+                  href={`/admin/usage/org/${alert.orgId}`}
+                  className="text-red-700 hover:underline font-medium"
                 >
                   {alert.orgName}
                 </Link>
                 <div className="flex gap-4 text-sm">
                   {alert.aiPercent > 0 && (
-                    <span className={alert.aiPercent >= 100 ? "text-red-600 font-bold" : "text-yellow-600"}>
+                    <span className={`px-2 py-1 rounded ${alert.aiPercent >= 100 ? "bg-red-100 text-red-700 font-bold" : "bg-amber-100 text-amber-700"}`}>
                       AI: {alert.aiPercent.toFixed(0)}%
                     </span>
                   )}
                   {alert.twilioPercent > 0 && (
-                    <span className={alert.twilioPercent >= 100 ? "text-red-600 font-bold" : "text-yellow-600"}>
+                    <span className={`px-2 py-1 rounded ${alert.twilioPercent >= 100 ? "bg-red-100 text-red-700 font-bold" : "bg-amber-100 text-amber-700"}`}>
                       Twilio: {alert.twilioPercent.toFixed(0)}%
                     </span>
                   )}
@@ -212,34 +229,34 @@ export default async function UsagePage({
       )}
 
       {/* Top Orgs Table */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Organization Usage</h2>
-          <span className="text-sm text-gray-500">{monthlyCosts.length} orgs</span>
-        </div>
+      <TableContainer
+        title="Organization Usage"
+        subtitle={`${monthlyCosts.length} organizations with usage data`}
+      >
         {monthlyCosts.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            No usage data for {currentMonth}
+          <div className="p-12 text-center">
+            <p className="text-gray-400 text-lg">📭</p>
+            <p className="text-gray-500 mt-2">No usage data for {currentMonth}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left p-3">Organization</th>
-                  <th className="text-right p-3">AI Cost</th>
-                  <th className="text-right p-3">Twilio</th>
-                  <th className="text-right p-3">Stripe Fees</th>
-                  <th className="text-right p-3">Total</th>
-                  <th className="text-right p-3">Tokens</th>
-                  <th className="text-right p-3">SMS</th>
-                  <th className="text-right p-3">Voice Min</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Organization</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">AI Cost</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Twilio</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stripe Fees</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tokens</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">SMS</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Voice</th>
+                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-100">
                 {monthlyCosts.map((cost) => (
-                  <tr key={cost.id} className="hover:bg-gray-50">
+                  <tr key={cost.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-3">
                       <Link
                         href={`/admin/orgs/${cost.orgSettings?.org?.id}`}
@@ -251,16 +268,16 @@ export default async function UsagePage({
                         {cost.orgSettings?.org?.industry}
                       </p>
                     </td>
-                    <td className="p-3 text-right font-mono">
+                    <td className="p-3 text-right font-mono text-purple-600">
                       ${cost.aiCostUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono">
+                    <td className="p-3 text-right font-mono text-emerald-600">
                       ${cost.twilioCostUsd.toFixed(2)}
                     </td>
                     <td className="p-3 text-right font-mono text-gray-500">
                       ${cost.stripeFeesUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono font-bold">
+                    <td className="p-3 text-right font-mono font-bold text-gray-900">
                       ${cost.totalCostUsd.toFixed(2)}
                     </td>
                     <td className="p-3 text-right font-mono text-gray-600">
@@ -272,10 +289,10 @@ export default async function UsagePage({
                     <td className="p-3 text-right font-mono text-gray-600">
                       {cost.voiceMinutes.toFixed(1)}
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 text-right">
                       <Link
-                        href={`/admin/usage/${cost.orgId}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        href={`/admin/usage/org/${cost.orgId}`}
+                        className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         Details →
                       </Link>
@@ -283,13 +300,13 @@ export default async function UsagePage({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-100 font-bold">
-                <tr>
-                  <td className="p-3">Total</td>
-                  <td className="p-3 text-right font-mono">${totalAiCost.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">${totalTwilioCost.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">${totalStripeFees.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">${totalCost.toFixed(2)}</td>
+              <tfoot className="bg-gray-50 border-t border-gray-200">
+                <tr className="font-bold">
+                  <td className="p-3 text-gray-900">Total</td>
+                  <td className="p-3 text-right font-mono text-purple-600">${totalAiCost.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-emerald-600">${totalTwilioCost.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-gray-500">${totalStripeFees.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-gray-900">${totalCost.toFixed(2)}</td>
                   <td className="p-3 text-right font-mono">{(totalTokens / 1000).toFixed(1)}K</td>
                   <td className="p-3 text-right font-mono">{totalSms}</td>
                   <td className="p-3 text-right font-mono">{totalVoiceMinutes.toFixed(1)}</td>
@@ -299,7 +316,7 @@ export default async function UsagePage({
             </table>
           </div>
         )}
-      </div>
+      </TableContainer>
     </div>
   );
 }

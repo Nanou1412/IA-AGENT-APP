@@ -8,6 +8,8 @@
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { StatCard } from "@/components/ui/admin-card";
+import { TableContainer, StatusBadge, FilterBar, FilterSelect, FilterInput } from "@/components/ui/admin-table";
 
 export const metadata = {
   title: "Orders - Admin",
@@ -21,39 +23,6 @@ function formatMoney(cents: number | null, currency: string = "AUD"): string {
     style: "currency",
     currency,
   }).format(cents / 100);
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "confirmed":
-      return "bg-green-100 text-green-800";
-    case "pending_confirmation":
-    case "pending_payment":
-    case "draft":
-      return "bg-yellow-100 text-yellow-800";
-    case "canceled":
-    case "expired":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
-
-function getPaymentStatusColor(status: string): string {
-  switch (status) {
-    case "paid":
-      return "bg-green-100 text-green-800";
-    case "pending":
-      return "bg-yellow-100 text-yellow-800";
-    case "failed":
-    case "expired":
-    case "canceled":
-      return "bg-red-100 text-red-800";
-    case "not_required":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
 }
 
 export default async function AdminOrdersPage({
@@ -131,150 +100,146 @@ export default async function AdminOrdersPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">🛒 Orders (Multi-Org)</h1>
-          <p className="text-gray-500">
-            {totalCount.toLocaleString()} orders total • Page {page}/{totalPages}
+          <h1 className="text-3xl font-bold text-gray-900">🛒 Orders</h1>
+          <p className="text-gray-500 mt-1">
+            {totalCount.toLocaleString()} orders across all organisations
           </p>
         </div>
-        <Link href="/admin" className="px-3 py-1 border rounded text-sm hover:bg-gray-50">
-          ← Retour Admin
+        <Link 
+          href="/admin" 
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          ← Back to Admin
         </Link>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Total Orders</p>
-          <p className="text-2xl font-bold">{totalCount.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Confirmed</p>
-          <p className="text-2xl font-bold text-green-600">{(statsMap.confirmed || 0).toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Pending</p>
-          <p className="text-2xl font-bold text-yellow-600">{(statsMap.pending || 0).toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Total Paid</p>
-          <p className="text-2xl font-bold text-green-600">
-            {formatMoney(paymentStatsMap.paid?.total || 0)}
-          </p>
-          <p className="text-xs text-gray-400">{(paymentStatsMap.paid?.count || 0).toLocaleString()} orders</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-500">Pending Payment</p>
-          <p className="text-2xl font-bold text-orange-600">
-            {formatMoney(paymentStatsMap.pending?.total || 0)}
-          </p>
-          <p className="text-xs text-gray-400">{(paymentStatsMap.pending?.count || 0).toLocaleString()} orders</p>
-        </div>
+        <StatCard
+          title="Total Orders"
+          value={totalCount}
+          icon="📦"
+        />
+        <StatCard
+          title="Confirmed"
+          value={statsMap.confirmed || 0}
+          icon="✅"
+          variant="success"
+        />
+        <StatCard
+          title="Pending"
+          value={(statsMap.pending_confirmation || 0) + (statsMap.pending_payment || 0)}
+          icon="⏳"
+          variant="warning"
+        />
+        <StatCard
+          title="Total Paid"
+          value={formatMoney(paymentStatsMap.paid?.total || 0)}
+          subtitle={`${(paymentStatsMap.paid?.count || 0).toLocaleString()} orders`}
+          icon="💰"
+          variant="success"
+        />
+        <StatCard
+          title="Pending Payment"
+          value={formatMoney(paymentStatsMap.pending?.total || 0)}
+          subtitle={`${(paymentStatsMap.pending?.count || 0).toLocaleString()} orders`}
+          icon="💳"
+          variant="warning"
+        />
       </div>
 
       {/* Filters */}
-      <form className="flex flex-wrap gap-4 bg-white p-4 rounded-lg border">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Search</label>
-          <input
-            type="text"
-            name="search"
-            defaultValue={search}
-            placeholder="Phone, name, payment ID..."
-            className="border rounded px-3 py-1 text-sm w-48"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Organization</label>
-          <select name="orgId" defaultValue={orgId} className="border rounded px-3 py-1 text-sm">
-            <option value="">All Orgs</option>
-            {orgs.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Order Status</label>
-          <select name="status" defaultValue={status} className="border rounded px-3 py-1 text-sm">
-            <option value="">All</option>
-            <option value="pending_confirmation">Pending Confirmation</option>
-            <option value="pending_payment">Pending Payment</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="canceled">Cancelled</option>
-            <option value="expired">Expired</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Payment</label>
-          <select name="paymentStatus" defaultValue={paymentStatus} className="border rounded px-3 py-1 text-sm">
-            <option value="">All</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="expired">Expired</option>
-            <option value="canceled">Cancelled</option>
-            <option value="not_required">Not Required</option>
-          </select>
-        </div>
-        <div className="flex items-end gap-2">
-          <button type="submit" className="px-4 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-            Filter
-          </button>
-          <Link href="/admin/orders" className="px-4 py-1 border rounded text-sm hover:bg-gray-50">
-            Reset
-          </Link>
-        </div>
-      </form>
+      <FilterBar resetHref="/admin/orders">
+        <FilterInput
+          label="Search"
+          name="search"
+          placeholder="Phone, name, payment ID..."
+          defaultValue={search}
+        />
+        <FilterSelect
+          label="Organization"
+          name="orgId"
+          defaultValue={orgId}
+          options={orgs.map((o) => ({ label: o.name, value: o.id }))}
+          placeholder="All Organizations"
+        />
+        <FilterSelect
+          label="Order Status"
+          name="status"
+          defaultValue={status}
+          options={[
+            { label: "Pending Confirmation", value: "pending_confirmation" },
+            { label: "Pending Payment", value: "pending_payment" },
+            { label: "Confirmed", value: "confirmed" },
+            { label: "Cancelled", value: "canceled" },
+            { label: "Expired", value: "expired" },
+          ]}
+        />
+        <FilterSelect
+          label="Payment Status"
+          name="paymentStatus"
+          defaultValue={paymentStatus}
+          options={[
+            { label: "Pending", value: "pending" },
+            { label: "Paid", value: "paid" },
+            { label: "Expired", value: "expired" },
+            { label: "Cancelled", value: "canceled" },
+            { label: "Not Required", value: "not_required" },
+          ]}
+        />
+      </FilterBar>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <TableContainer
+        title="All Orders"
+        subtitle={`Page ${page} of ${totalPages}`}
+      >
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium">Org</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Customer</th>
-              <th className="px-4 py-3 text-right text-sm font-medium">Amount</th>
-              <th className="px-4 py-3 text-center text-sm font-medium">Status</th>
-              <th className="px-4 py-3 text-center text-sm font-medium">Payment</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Payment Intent</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Org</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment Intent</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-gray-100">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                  No orders found
+                <td colSpan={8} className="px-4 py-12 text-center">
+                  <p className="text-gray-400 text-lg">📭</p>
+                  <p className="text-gray-500 mt-2">No orders found</p>
                 </td>
               </tr>
             ) : (
               orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
+                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm">
-                    <Link href={`/admin/organizations/${order.orgId}`} className="text-blue-600 hover:underline">
+                    <Link href={`/admin/orgs/${order.orgId}`} className="text-blue-600 hover:underline font-medium">
                       {order.Org.name}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="font-medium">{order.customerName || "—"}</div>
+                    <div className="font-medium text-gray-900">{order.customerName || "—"}</div>
                     <div className="text-gray-500 text-xs">{order.customerPhone}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-medium">
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
                     {formatMoney(order.paymentAmountCents || order.amountTotalCents, order.paymentCurrency)}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
+                    <StatusBadge status={order.status} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${getPaymentStatusColor(order.paymentStatus)}`}>
-                      {order.paymentStatus}
-                    </span>
+                    <StatusBadge status={order.paymentStatus} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString("fr-FR")}
-                    <div className="text-xs">
-                      {new Date(order.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    <div>{new Date(order.createdAt).toLocaleDateString("en-AU")}</div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(order.createdAt).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm font-mono text-xs">
@@ -291,12 +256,12 @@ export default async function AdminOrdersPage({
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-right">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="px-2 py-1 border rounded text-xs hover:bg-gray-50"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                     >
-                      View
+                      View →
                     </Link>
                   </td>
                 </tr>
@@ -304,26 +269,26 @@ export default async function AdminOrdersPage({
             )}
           </tbody>
         </table>
-      </div>
+      </TableContainer>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {page > 1 && (
             <Link
               href={`/admin/orders?page=${page - 1}${status ? `&status=${status}` : ""}${paymentStatus ? `&paymentStatus=${paymentStatus}` : ""}${orgId ? `&orgId=${orgId}` : ""}${search ? `&search=${search}` : ""}`}
-              className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               ← Previous
             </Link>
           )}
-          <span className="px-3 py-1 text-sm">
+          <span className="px-4 py-2 text-sm text-gray-500">
             Page {page} of {totalPages}
           </span>
           {page < totalPages && (
             <Link
               href={`/admin/orders?page=${page + 1}${status ? `&status=${status}` : ""}${paymentStatus ? `&paymentStatus=${paymentStatus}` : ""}${orgId ? `&orgId=${orgId}` : ""}${search ? `&search=${search}` : ""}`}
-              className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Next →
             </Link>
