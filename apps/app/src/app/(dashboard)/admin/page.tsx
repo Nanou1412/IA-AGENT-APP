@@ -53,12 +53,12 @@ export default async function AdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-500 mt-1">Overview of your platform metrics and management.</p>
+          <h1 className="text-3xl font-bold text-primary-900">Admin Dashboard</h1>
+          <p className="text-slate-500 mt-1">Overview of your platform metrics and management.</p>
         </div>
         <Link
           href="/admin/analytics"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-300 to-primary-400 text-primary-900 font-medium rounded-lg hover:from-primary-400 hover:to-primary-500 transition-all shadow-sm"
         >
           <span>📈</span>
           Analytics Dashboard
@@ -67,7 +67,7 @@ export default async function AdminPage() {
 
       {/* Quick Stats - Primary */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Platform Overview</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Platform Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             title="Organisations"
@@ -100,7 +100,7 @@ export default async function AdminPage() {
 
       {/* Activity Stats - 24h */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Last 24 Hours</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Last 24 Hours</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             title="Messages"
@@ -138,7 +138,7 @@ export default async function AdminPage() {
 
       {/* Quick Actions - Main Features */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Core Management</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Core Management</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ActionCard
             icon="🏢"
@@ -173,7 +173,7 @@ export default async function AdminPage() {
 
       {/* Financial */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Financial</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Financial</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ActionCard
             icon="💳"
@@ -200,7 +200,7 @@ export default async function AdminPage() {
 
       {/* Communication */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Communication</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Communication</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ActionCard
             icon="💬"
@@ -225,7 +225,7 @@ export default async function AdminPage() {
 
       {/* Configuration */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Configuration</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Configuration</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ActionCard
             icon="📄"
@@ -256,7 +256,7 @@ export default async function AdminPage() {
 
       {/* Emergency */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Emergency Controls</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Emergency Controls</h2>
         <div className="grid md:grid-cols-2 gap-4">
           <ActionCard
             icon="🚨"
@@ -265,22 +265,22 @@ export default async function AdminPage() {
             href="/admin/kill-switches"
             variant="warning"
           />
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 p-5">
+          <div className="bg-gradient-to-br from-brand-light to-gray-100 rounded-xl border border-gray-200 p-5">
             <div className="flex items-center gap-4">
               <span className="text-3xl">📖</span>
               <div>
-                <h3 className="font-semibold text-gray-900">Operations Documentation</h3>
-                <p className="text-sm text-gray-500 mt-1">Incident playbooks and monitoring guides.</p>
+                <h3 className="font-semibold text-primary-900">Operations Documentation</h3>
+                <p className="text-sm text-slate-500 mt-1">Incident playbooks and monitoring guides.</p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <a href="/docs/ops/MONITORING.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-gray-300 transition-colors">
+              <a href="/docs/ops/MONITORING.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 hover:border-primary-300 transition-colors">
                 Monitoring
               </a>
-              <a href="/docs/ops/KILL_SWITCHES.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-gray-300 transition-colors">
+              <a href="/docs/ops/KILL_SWITCHES.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 hover:border-primary-300 transition-colors">
                 Kill Switches
               </a>
-              <a href="/docs/ops/INCIDENT_PAYMENT_FAILURES.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-gray-300 transition-colors">
+              <a href="/docs/ops/INCIDENT_PAYMENT_FAILURES.md" target="_blank" className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 hover:border-primary-300 transition-colors">
                 Payment Failures
               </a>
             </div>

@@ -120,7 +120,7 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
   return (
     <>
       {/* Admin Sub-header */}
-      <div className="bg-gray-800 text-white px-4 py-2">
+      <div className="bg-brand-night text-white px-4 py-2">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left: Env badge + Search */}
           <div className="flex items-center gap-4">
@@ -129,7 +129,7 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
               className={`px-3 py-1 rounded-full text-xs font-bold ${
                 currentEnv === "prod"
                   ? "bg-red-500 text-white"
-                  : "bg-yellow-500 text-black"
+                  : "bg-amber-400 text-primary-900"
               }`}
             >
               {currentEnv === "prod" ? "🔴 PRODUCTION" : "🟡 SANDBOX"}
@@ -138,11 +138,11 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
             {/* Search Button */}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm"
+              className="flex items-center gap-2 bg-primary-800/50 hover:bg-primary-700/50 px-3 py-1.5 rounded text-sm"
             >
               <span>🔍</span>
               <span className="hidden md:inline">Search...</span>
-              <kbd className="hidden md:inline bg-gray-600 px-1.5 py-0.5 rounded text-xs">
+              <kbd className="hidden md:inline bg-primary-700/50 px-1.5 py-0.5 rounded text-xs">
                 ⌘K
               </kbd>
             </button>
@@ -154,7 +154,7 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
             <div className="relative">
               <button
                 onClick={() => setIsExportOpen(!isExportOpen)}
-                className="flex items-center gap-1 hover:bg-gray-700 px-2 py-1 rounded text-sm"
+                className="flex items-center gap-1 hover:bg-primary-800/50 px-2 py-1 rounded text-sm"
               >
                 📤 <span className="hidden md:inline">Export</span>
               </button>
@@ -192,7 +192,7 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
             <div className="relative">
               <button
                 onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-                className="relative flex items-center hover:bg-gray-700 px-2 py-1 rounded"
+                className="relative flex items-center hover:bg-primary-800/50 px-2 py-1 rounded"
               >
                 🔔
                 {unreadAlerts.length > 0 && (
@@ -230,14 +230,14 @@ export function AdminHeader({ alerts = [], currentEnv = "prod" }: AdminHeaderPro
             {/* Quick links */}
             <Link
               href="/admin/kill-switches"
-              className="hover:bg-gray-700 px-2 py-1 rounded text-sm"
+              className="hover:bg-primary-800/50 px-2 py-1 rounded text-sm"
               title="Kill Switches"
             >
               🚨
             </Link>
             <Link
               href="/admin/debug"
-              className="hover:bg-gray-700 px-2 py-1 rounded text-sm"
+              className="hover:bg-primary-800/50 px-2 py-1 rounded text-sm"
               title="Debug"
             >
               🔧

@@ -123,8 +123,8 @@ export default async function AdminAnalyticsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">📈 Analytics Dashboard</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-primary-900">📈 Analytics Dashboard</h1>
+          <p className="text-slate-500 mt-1">
             Last {range} days • {days[0]?.date} to {days[days.length - 1]?.date}
           </p>
         </div>
@@ -134,8 +134,8 @@ export default async function AdminAnalyticsPage({
               href="/admin/analytics?range=7d"
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 range === 7 
-                  ? "bg-blue-600 text-white shadow-sm" 
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  ? "bg-primary-300 text-primary-900 shadow-sm" 
+                  : "text-slate-600 hover:text-slate-900 hover:bg-gray-50"
               }`}
             >
               7 days
@@ -144,8 +144,8 @@ export default async function AdminAnalyticsPage({
               href="/admin/analytics?range=30d"
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 range === 30 
-                  ? "bg-blue-600 text-white shadow-sm" 
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  ? "bg-primary-300 text-primary-900 shadow-sm" 
+                  : "text-slate-600 hover:text-slate-900 hover:bg-gray-50"
               }`}
             >
               30 days
@@ -153,7 +153,7 @@ export default async function AdminAnalyticsPage({
           </div>
           <Link 
             href="/admin" 
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             ← Admin
           </Link>
@@ -198,17 +198,17 @@ export default async function AdminAnalyticsPage({
 
       {/* Funnel */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="font-semibold text-gray-900 mb-6">🔽 Conversion Funnel</h2>
+        <h2 className="font-semibold text-primary-900 mb-6">🔽 Conversion Funnel</h2>
         <div className="flex items-center justify-center gap-6">
           <div className="text-center">
-            <div className="bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-800 rounded-xl px-8 py-5 min-w-[140px] border border-blue-200">
+            <div className="bg-gradient-to-br from-primary-100 to-primary-200 text-primary-800 rounded-xl px-8 py-5 min-w-[140px] border border-primary-300">
               <p className="text-3xl font-bold">{totals.sessions.toLocaleString()}</p>
               <p className="text-sm font-medium mt-1">Sessions</p>
             </div>
           </div>
           <div className="text-center">
             <div className="text-2xl text-gray-300">→</div>
-            <div className="text-sm font-medium text-blue-600 mt-1">{sessionToOrderRate}%</div>
+            <div className="text-sm font-medium text-primary-600 mt-1">{sessionToOrderRate}%</div>
           </div>
           <div className="text-center">
             <div className="bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-800 rounded-xl px-8 py-5 min-w-[140px] border border-amber-200">
@@ -221,29 +221,29 @@ export default async function AdminAnalyticsPage({
             <div className="text-sm font-medium text-amber-600 mt-1">{orderToPaidRate}%</div>
           </div>
           <div className="text-center">
-            <div className="bg-gradient-to-br from-emerald-100 to-green-100 text-emerald-800 rounded-xl px-8 py-5 min-w-[140px] border border-emerald-200">
+            <div className="bg-gradient-to-br from-success-100 to-success-200 text-success-800 rounded-xl px-8 py-5 min-w-[140px] border border-success-300">
               <p className="text-3xl font-bold">{totals.paidOrders.toLocaleString()}</p>
               <p className="text-sm font-medium mt-1">Paid</p>
             </div>
           </div>
         </div>
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Overall conversion: <span className="font-semibold text-gray-700">{sessionToPaidRate}%</span> sessions → paid orders
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Overall conversion: <span className="font-semibold text-slate-700">{sessionToPaidRate}%</span> sessions → paid orders
         </p>
       </div>
 
       {/* Sessions Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="font-semibold text-gray-900 mb-4">📊 Daily Sessions</h2>
+        <h2 className="font-semibold text-primary-900 mb-4">📊 Daily Sessions</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
               key={day.date}
-              className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t hover:from-blue-600 hover:to-blue-500 transition-all cursor-pointer group relative"
+              className="flex-1 bg-gradient-to-t from-primary-500 to-primary-300 rounded-t hover:from-primary-600 hover:to-primary-400 transition-all cursor-pointer group relative"
               style={{ height: `${(day.sessions / maxSessions) * 100}%`, minHeight: day.sessions > 0 ? "4px" : "0" }}
               title={`${day.date}: ${day.sessions} sessions`}
             >
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary-900 text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 shadow-lg">
                 {day.date.slice(5)}: {day.sessions}
               </div>
             </div>
@@ -257,7 +257,7 @@ export default async function AdminAnalyticsPage({
 
       {/* Messages Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="font-semibold text-gray-900 mb-4">💬 Daily Messages</h2>
+        <h2 className="font-semibold text-primary-900 mb-4">💬 Daily Messages</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
@@ -280,7 +280,7 @@ export default async function AdminAnalyticsPage({
 
       {/* Orders Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="font-semibold text-gray-900 mb-4">🛒 Daily Orders</h2>
+        <h2 className="font-semibold text-primary-900 mb-4">🛒 Daily Orders</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div key={day.date} className="flex-1 relative group">
@@ -312,7 +312,7 @@ export default async function AdminAnalyticsPage({
 
       {/* AI Cost Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="font-semibold text-gray-900 mb-4">💰 Daily AI Cost</h2>
+        <h2 className="font-semibold text-primary-900 mb-4">💰 Daily AI Cost</h2>
         <div className="flex items-end gap-1 h-40">
           {days.map((day) => (
             <div
@@ -336,42 +336,42 @@ export default async function AdminAnalyticsPage({
       {/* Data Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-5 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">📋 Daily Breakdown</h2>
+          <h2 className="font-semibold text-primary-900">📋 Daily Breakdown</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-brand-light border-b border-gray-100">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Sessions</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Messages</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Calls</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Orders</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">AI Cost</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Sessions</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Messages</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Calls</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Orders</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Paid</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">AI Cost</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {days.slice().reverse().map((day) => (
-                <tr key={day.date} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{day.date}</td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.sessions}</td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.messages}</td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.calls}</td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-600">{day.orders}</td>
-                  <td className="px-4 py-3 text-sm text-right text-emerald-600 font-medium">{day.paidOrders}</td>
+                <tr key={day.date} className="hover:bg-brand-light/50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-primary-900">{day.date}</td>
+                  <td className="px-4 py-3 text-sm text-right text-slate-600">{day.sessions}</td>
+                  <td className="px-4 py-3 text-sm text-right text-slate-600">{day.messages}</td>
+                  <td className="px-4 py-3 text-sm text-right text-slate-600">{day.calls}</td>
+                  <td className="px-4 py-3 text-sm text-right text-slate-600">{day.orders}</td>
+                  <td className="px-4 py-3 text-sm text-right text-success-600 font-medium">{day.paidOrders}</td>
                   <td className="px-4 py-3 text-sm text-right font-mono">${day.aiCost.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-50 border-t border-gray-200">
+            <tfoot className="bg-brand-light border-t border-gray-200">
               <tr className="font-semibold">
-                <td className="px-4 py-3 text-sm text-gray-900">Total</td>
+                <td className="px-4 py-3 text-sm text-primary-900">Total</td>
                 <td className="px-4 py-3 text-sm text-right">{totals.sessions}</td>
                 <td className="px-4 py-3 text-sm text-right">{totals.messages}</td>
                 <td className="px-4 py-3 text-sm text-right">{totals.calls}</td>
                 <td className="px-4 py-3 text-sm text-right">{totals.orders}</td>
-                <td className="px-4 py-3 text-sm text-right text-emerald-600">{totals.paidOrders}</td>
+                <td className="px-4 py-3 text-sm text-right text-success-600">{totals.paidOrders}</td>
                 <td className="px-4 py-3 text-sm text-right font-mono">${totals.aiCost.toFixed(2)}</td>
               </tr>
             </tfoot>

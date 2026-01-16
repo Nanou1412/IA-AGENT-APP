@@ -118,12 +118,12 @@ export default async function UsagePage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">📊 Usage & Costs</h1>
-          <p className="text-gray-500 mt-1">Monitor costs, budgets, and resource consumption</p>
+          <h1 className="text-3xl font-bold text-primary-900">📊 Usage & Costs</h1>
+          <p className="text-slate-500 mt-1">Monitor costs, budgets, and resource consumption</p>
         </div>
         <Link 
           href="/admin" 
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           ← Back to Admin
         </Link>
@@ -132,11 +132,11 @@ export default async function UsagePage({
       {/* Month Selector */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <form className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Period:</label>
+          <label className="text-sm font-medium text-slate-700">Period:</label>
           <select
             name="month"
             defaultValue={currentMonth}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
             onChange={(e) => {
               const form = e.target.form;
               if (form) form.submit();
@@ -236,64 +236,64 @@ export default async function UsagePage({
       >
         {monthlyCosts.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-gray-400 text-lg">📭</p>
-            <p className="text-gray-500 mt-2">No usage data for {currentMonth}</p>
+            <p className="text-slate-400 text-lg">📭</p>
+            <p className="text-slate-500 mt-2">No usage data for {currentMonth}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-brand-light border-b border-gray-100">
                 <tr>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Organization</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">AI Cost</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Twilio</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stripe Fees</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tokens</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">SMS</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Voice</th>
-                  <th className="text-right p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                  <th className="text-left p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Organization</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">AI Cost</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Twilio</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Stripe Fees</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Total</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Tokens</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">SMS</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Voice</th>
+                  <th className="text-right p-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {monthlyCosts.map((cost) => (
-                  <tr key={cost.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={cost.id} className="hover:bg-brand-light/50 transition-colors">
                     <td className="p-3">
                       <Link
                         href={`/admin/orgs/${cost.orgSettings?.org?.id}`}
-                        className="font-medium text-blue-600 hover:underline"
+                        className="font-medium text-primary-600 hover:underline"
                       >
                         {cost.orgSettings?.org?.name || "Unknown"}
                       </Link>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {cost.orgSettings?.org?.industry}
                       </p>
                     </td>
                     <td className="p-3 text-right font-mono text-purple-600">
                       ${cost.aiCostUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono text-emerald-600">
+                    <td className="p-3 text-right font-mono text-success-600">
                       ${cost.twilioCostUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono text-gray-500">
+                    <td className="p-3 text-right font-mono text-slate-500">
                       ${cost.stripeFeesUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono font-bold text-gray-900">
+                    <td className="p-3 text-right font-mono font-bold text-primary-900">
                       ${cost.totalCostUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 text-right font-mono text-gray-600">
+                    <td className="p-3 text-right font-mono text-slate-600">
                       {((cost.aiTokensInput + cost.aiTokensOutput) / 1000).toFixed(1)}K
                     </td>
-                    <td className="p-3 text-right font-mono text-gray-600">
+                    <td className="p-3 text-right font-mono text-slate-600">
                       {cost.smsCount}
                     </td>
-                    <td className="p-3 text-right font-mono text-gray-600">
+                    <td className="p-3 text-right font-mono text-slate-600">
                       {cost.voiceMinutes.toFixed(1)}
                     </td>
                     <td className="p-3 text-right">
                       <Link
                         href={`/admin/usage/org/${cost.orgId}`}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                       >
                         Details →
                       </Link>
@@ -301,13 +301,13 @@ export default async function UsagePage({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tfoot className="bg-brand-light border-t border-gray-200">
                 <tr className="font-bold">
-                  <td className="p-3 text-gray-900">Total</td>
+                  <td className="p-3 text-primary-900">Total</td>
                   <td className="p-3 text-right font-mono text-purple-600">${totalAiCost.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono text-emerald-600">${totalTwilioCost.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono text-gray-500">${totalStripeFees.toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono text-gray-900">${totalCost.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-success-600">${totalTwilioCost.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-slate-500">${totalStripeFees.toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono text-primary-900">${totalCost.toFixed(2)}</td>
                   <td className="p-3 text-right font-mono">{(totalTokens / 1000).toFixed(1)}K</td>
                   <td className="p-3 text-right font-mono">{totalSms}</td>
                   <td className="p-3 text-right font-mono">{totalVoiceMinutes.toFixed(1)}</td>

@@ -1,3 +1,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =====================================================
+   Brand Color System
+   =====================================================
+   Bleu ciel:   #87CEEB (primary, info)
+   Bleu nuit:   #0B1220 (headers, dark elements)
+   Blanc:       #FFFFFF (backgrounds)
+   Gris clair:  #F1F5F9 (secondary backgrounds)
+   Vert:        #16A34A (success)
+   ===================================================== */
+
+@layer base {
+  :root {
+    /* Brand Colors */
+    --brand-sky: 135 206 235;
+    --brand-night: 11 18 32;
+    --brand-white: 255 255 255;
+    --brand-light: 241 245 249;
+    --brand-green: 22 163 74;
+    
+    /* Background */
+    --background: 255 255 255;
+    --background-secondary: 241 245 249;
+    
+    /* Foreground */
+    --foreground: 11 18 32;
+    --foreground-muted: 100 116 139;
+    
+    /* Primary (Sky Blue) */
+    --primary: 135 206 235;
+    --primary-foreground: 11 18 32;
+    
+    /* Success (Green) */
+    --success: 22 163 74;
+    --success-foreground: 255 255 255;
+    
+    /* Warning */
+    --warning: 245 158 11;
+    --warning-foreground: 255 255 255;
+    
+    /* Danger */
+    --danger: 239 68 68;
+    --danger-foreground: 255 255 255;
+    
+    /* Border */
+    --border: 226 232 240;
+    --border-hover: 203 213 225;
+  }
+}
+
+@layer components {
+  /* Button variants using brand colors */
+  .btn-primary {
+    @apply bg-primary-300 text-primary-900 hover:bg-primary-400 transition-colors font-medium rounded-lg px-4 py-2;
+  }
+  
+  .btn-success {
+    @apply bg-success-600 text-white hover:bg-success-700 transition-colors font-medium rounded-lg px-4 py-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-brand-light text-primary-900 hover:bg-gray-200 transition-colors font-medium rounded-lg px-4 py-2;
+  }
+  
+  /* Card with brand styling */
+  .card-brand {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+  }
+  
+  /* Header styling with brand night blue */
+  .header-brand {
+    @apply bg-brand-night text-white;
+  }
+}

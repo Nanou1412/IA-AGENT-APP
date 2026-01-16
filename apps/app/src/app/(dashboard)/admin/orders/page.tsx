@@ -100,14 +100,14 @@ export default async function AdminOrdersPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">🛒 Orders</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-primary-900">🛒 Orders</h1>
+          <p className="text-slate-500 mt-1">
             {totalCount.toLocaleString()} orders across all organisations
           </p>
         </div>
         <Link 
           href="/admin" 
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           ← Back to Admin
         </Link>
@@ -195,39 +195,39 @@ export default async function AdminOrdersPage({
         subtitle={`Page ${page} of ${totalPages}`}
       >
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-brand-light border-b border-gray-100">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Org</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment Intent</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Org</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Amount</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Created</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment Intent</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center">
-                  <p className="text-gray-400 text-lg">📭</p>
-                  <p className="text-gray-500 mt-2">No orders found</p>
+                  <p className="text-slate-400 text-lg">📭</p>
+                  <p className="text-slate-500 mt-2">No orders found</p>
                 </td>
               </tr>
             ) : (
               orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={order.id} className="hover:bg-brand-light/50 transition-colors">
                   <td className="px-4 py-3 text-sm">
-                    <Link href={`/admin/orgs/${order.orgId}`} className="text-blue-600 hover:underline font-medium">
+                    <Link href={`/admin/orgs/${order.orgId}`} className="text-primary-600 hover:underline font-medium">
                       {order.Org.name}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="font-medium text-gray-900">{order.customerName || "—"}</div>
-                    <div className="text-gray-500 text-xs">{order.customerPhone}</div>
+                    <div className="font-medium text-primary-900">{order.customerName || "—"}</div>
+                    <div className="text-slate-500 text-xs">{order.customerPhone}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-primary-900">
                     {formatMoney(order.paymentAmountCents || order.amountTotalCents, order.paymentCurrency)}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -236,9 +236,9 @@ export default async function AdminOrdersPage({
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={order.paymentStatus} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-slate-500">
                     <div>{new Date(order.createdAt).toLocaleDateString("en-AU")}</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-slate-400">
                       {new Date(order.createdAt).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </td>
@@ -248,18 +248,18 @@ export default async function AdminOrdersPage({
                         href={`https://dashboard.stripe.com/payments/${order.stripePaymentIntentId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-primary-600 hover:underline"
                       >
                         {order.stripePaymentIntentId.slice(0, 15)}...
                       </a>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-slate-400">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                     >
                       View →
                     </Link>
@@ -277,18 +277,18 @@ export default async function AdminOrdersPage({
           {page > 1 && (
             <Link
               href={`/admin/orders?page=${page - 1}${status ? `&status=${status}` : ""}${paymentStatus ? `&paymentStatus=${paymentStatus}` : ""}${orgId ? `&orgId=${orgId}` : ""}${search ? `&search=${search}` : ""}`}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               ← Previous
             </Link>
           )}
-          <span className="px-4 py-2 text-sm text-gray-500">
+          <span className="px-4 py-2 text-sm text-slate-500">
             Page {page} of {totalPages}
           </span>
           {page < totalPages && (
             <Link
               href={`/admin/orders?page=${page + 1}${status ? `&status=${status}` : ""}${paymentStatus ? `&paymentStatus=${paymentStatus}` : ""}${orgId ? `&orgId=${orgId}` : ""}${search ? `&search=${search}` : ""}`}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Next →
             </Link>

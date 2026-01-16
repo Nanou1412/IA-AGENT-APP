@@ -2,6 +2,13 @@
  * Admin Table Components
  * 
  * Reusable table components for admin pages.
+ * 
+ * Brand Colors:
+ * - Bleu ciel:  #87CEEB (primary-300)
+ * - Bleu nuit:  #0B1220 (primary-900)
+ * - Blanc:      #FFFFFF
+ * - Gris clair: #F1F5F9 (brand-light)
+ * - Vert:       #16A34A (success-600)
  */
 
 import Link from "next/link";
@@ -25,9 +32,9 @@ export function TableContainer({
       {(title || action) && (
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
-            {title && <h3 className="font-semibold text-gray-900">{title}</h3>}
+            {title && <h3 className="font-semibold text-primary-900">{title}</h3>}
             {subtitle && (
-              <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+              <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
             )}
           </div>
           {action}
@@ -62,11 +69,11 @@ export function StatusBadge({ status, variant = "auto" }: StatusBadgeProps) {
   const v = variant === "auto" ? getAutoVariant(status) : variant;
 
   const styles = {
-    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    success: "bg-success-50 text-success-700 border-success-200",
     warning: "bg-amber-50 text-amber-700 border-amber-200",
     danger: "bg-red-50 text-red-700 border-red-200",
-    info: "bg-blue-50 text-blue-700 border-blue-200",
-    neutral: "bg-gray-50 text-gray-600 border-gray-200",
+    info: "bg-primary-50 text-primary-700 border-primary-200",
+    neutral: "bg-gray-50 text-slate-600 border-gray-200",
   };
 
   return (
@@ -95,8 +102,8 @@ export function TableAction({
   variant = "default",
 }: TableActionProps) {
   const styles = {
-    default: "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
-    primary: "text-blue-600 hover:text-blue-700 hover:bg-blue-50",
+    default: "text-slate-600 hover:text-slate-900 hover:bg-gray-100",
+    primary: "text-primary-600 hover:text-primary-700 hover:bg-primary-50",
     danger: "text-red-600 hover:text-red-700 hover:bg-red-50",
   };
 
@@ -146,14 +153,14 @@ export function FilterBar({ children, onSubmit, resetHref }: FilterBarProps) {
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-primary-300 text-primary-900 text-sm font-medium rounded-lg hover:bg-primary-400 transition-colors"
         >
           Apply Filter
         </button>
         {resetHref && (
           <Link
             href={resetHref}
-            className="px-4 py-2 text-gray-600 text-sm font-medium hover:text-gray-900"
+            className="px-4 py-2 text-slate-600 text-sm font-medium hover:text-slate-900"
           >
             Reset
           </Link>
@@ -181,13 +188,13 @@ export function FilterSelect({
 }: FilterSelectProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">
+      <label className="block text-xs font-medium text-slate-500 mb-1">
         {label}
       </label>
       <select
         name={name}
         defaultValue={defaultValue}
-        className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
       >
         <option value="">{placeholder}</option>
         {options.map((opt) => (
@@ -218,7 +225,7 @@ export function FilterInput({
 }: FilterInputProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">
+      <label className="block text-xs font-medium text-slate-500 mb-1">
         {label}
       </label>
       <input
@@ -226,7 +233,7 @@ export function FilterInput({
         name={name}
         placeholder={placeholder}
         defaultValue={defaultValue}
-        className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
       />
     </div>
   );
@@ -253,18 +260,18 @@ export function Pagination({
       {currentPage > 1 && (
         <Link
           href={`${baseHref}${separator}page=${currentPage - 1}`}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           ← Previous
         </Link>
       )}
-      <span className="px-4 py-2 text-sm text-gray-500">
+      <span className="px-4 py-2 text-sm text-slate-500">
         Page {currentPage} of {totalPages}
       </span>
       {currentPage < totalPages && (
         <Link
           href={`${baseHref}${separator}page=${currentPage + 1}`}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Next →
         </Link>
