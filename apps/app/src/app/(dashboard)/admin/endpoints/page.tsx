@@ -76,8 +76,7 @@ export default async function EndpointsPage({
   const [totalEndpoints, activeEndpoints, smsEndpoints, whatsappEndpoints, voiceEndpoints] = stats;
 
   // Get recent activity for each endpoint
-  const now = new Date();
-  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  // const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000); // For future activity tracking
 
   const getChannelBadge = (channel: string) => {
     const colors: Record<string, string> = {
@@ -303,7 +302,7 @@ export default async function EndpointsPage({
               <Link href="/admin/messaging" className="underline">
                 messaging logs
               </Link>{" "}
-              for "unmapped endpoint" errors.
+              for &quot;unmapped endpoint&quot; errors.
             </p>
           </div>
         </div>

@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     }
 
     const results: SearchResult[] = [];
-    const queryLower = query.toLowerCase();
 
     // Search orgs by name or ID
     const orgs = await prisma.org.findMany({

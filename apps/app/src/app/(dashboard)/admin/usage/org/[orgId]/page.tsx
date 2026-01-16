@@ -21,8 +21,8 @@ export default async function OrgUsageDetailPage({
   searchParams: Promise<{ period?: string }>;
 }) {
   await requireAdmin();
-  const session = await getSession();
-  const actorUserId = session?.user?.id || "system";
+  // Session available for future audit logging if needed
+  await getSession();
 
   const { orgId } = await params;
   const resolvedSearchParams = await searchParams;

@@ -213,7 +213,7 @@ export default async function NewEndpointPage() {
         <h3 className="font-medium text-blue-900 mb-2">How Routing Works</h3>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• When Twilio receives a message/call to this number, we look up the org</li>
-          <li>• The org's agent template and settings are used to handle the conversation</li>
+          <li>• The org&apos;s agent template and settings are used to handle the conversation</li>
           <li>• Multiple endpoints can point to the same org (e.g., SMS + Voice)</li>
           <li>• WhatsApp endpoints should use the WhatsApp-enabled number</li>
         </ul>

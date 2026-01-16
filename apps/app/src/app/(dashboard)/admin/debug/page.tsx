@@ -35,8 +35,10 @@ export default async function DebugPage() {
     recentCalls,
     totalOrders,
     recentOrders,
-    _stripeEvents,
-    _recentStripeEvents,
+    // stripeEvents - not used yet
+    ,
+    // recentStripeEvents - not used yet
+    ,
     auditLogs,
     recentAuditLogs,
   ] = await Promise.all([

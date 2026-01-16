@@ -5,7 +5,7 @@
  */
 
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { revalidatePath } from "next/cache";

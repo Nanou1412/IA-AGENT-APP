@@ -94,16 +94,17 @@ export default async function UsagePage({
 
   // Get last 24h stats
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const [runs24h, tokens24h] = await Promise.all([
+  const [_runs24h, tokens24h] = await Promise.all([
     prisma.engineRun.count({ where: { createdAt: { gte: last24h } } }),
     prisma.engineRun.aggregate({
       where: { createdAt: { gte: last24h } },
       _sum: { inputTokens: true, outputTokens: true, costUsd: true },
     }),
   ]);
+  void _runs24h; // Available for future use
 
   const cost24h = tokens24h._sum.costUsd || 0;
-  const tokensTotal24h = (tokens24h._sum.inputTokens || 0) + (tokens24h._sum.outputTokens || 0);
+  // tokensTotal24h available: (tokens24h._sum.inputTokens || 0) + (tokens24h._sum.outputTokens || 0)
 
   // Available months
   const availableMonths = await prisma.monthlyOrgCost.findMany({
