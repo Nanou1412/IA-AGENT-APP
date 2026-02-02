@@ -9,6 +9,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireUserWithOrg } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { ConversationsFilter } from '@/components/conversations-filter';
 
 export const metadata: Metadata = {
   title: 'Conversations | IA Agent App',
@@ -153,45 +154,7 @@ export default async function ConversationsPage({
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border p-4">
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
-            <select
-              className="border rounded-lg px-3 py-2 text-sm"
-              defaultValue={params.channel || 'all'}
-              onChange={(e) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('channel', e.target.value);
-                url.searchParams.delete('page');
-                window.location.href = url.toString();
-              }}
-            >
-              <option value="all">All Channels</option>
-              <option value="sms">SMS</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="voice">Voice</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              className="border rounded-lg px-3 py-2 text-sm"
-              defaultValue={params.status || 'all'}
-              onChange={(e) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('status', e.target.value);
-                url.searchParams.delete('page');
-                window.location.href = url.toString();
-              }}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="closed">Closed</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <ConversationsFilter />
 
       {/* Conversations List */}
       <div className="bg-white rounded-lg border overflow-hidden">
