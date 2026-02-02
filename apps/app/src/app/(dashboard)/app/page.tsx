@@ -57,7 +57,6 @@ export default async function DashboardPage() {
     activeAgentsCount,
     totalConversations,
     messagesToday,
-    totalMessages,
     successfulRuns,
     totalRuns,
     ordersCount,
@@ -73,10 +72,6 @@ export default async function DashboardPage() {
     // Messages today
     prisma.messageLog.count({
       where: { orgId: org.id, createdAt: { gte: todayStart } },
-    }),
-    // Total messages last 7 days
-    prisma.messageLog.count({
-      where: { orgId: org.id, createdAt: { gte: last7Days } },
     }),
     // Successful engine runs
     prisma.engineRun.count({

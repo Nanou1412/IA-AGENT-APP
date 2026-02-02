@@ -91,7 +91,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Customize Your Agent</h3>
               <p className="text-gray-600">
-                Add your business info, menu, services, hours, and customize the AI's tone and responses.
+                Add your business info, menu, services, hours, and customize the AI&apos;s tone and responses.
               </p>
             </div>
             <div className="text-center">
@@ -248,8 +248,8 @@ export default function HomePage() {
                 ))}
               </div>
               <p className="text-gray-600 mb-4">
-                "We used to miss half our after-hours calls. Now our AI handles takeaway orders 24/7. 
-                Revenue is up 30% since we started."
+                &ldquo;We used to miss half our after-hours calls. Now our AI handles takeaway orders 24/7. 
+                Revenue is up 30% since we started.&rdquo;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
@@ -268,8 +268,8 @@ export default function HomePage() {
                 ))}
               </div>
               <p className="text-gray-600 mb-4">
-                "Guests love being able to message us on WhatsApp. The AI handles 80% of inquiries 
-                perfectly, and escalates the rest to our team."
+                &ldquo;Guests love being able to message us on WhatsApp. The AI handles 80% of inquiries 
+                perfectly, and escalates the rest to our team.&rdquo;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -288,8 +288,8 @@ export default function HomePage() {
                 ))}
               </div>
               <p className="text-gray-600 mb-4">
-                "As a one-man plumbing business, I can't answer calls while under a sink. 
-                The AI captures every lead and books them straight into my calendar."
+                &ldquo;As a one-man plumbing business, I can&apos;t answer calls while under a sink. 
+                The AI captures every lead and books them straight into my calendar.&rdquo;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
