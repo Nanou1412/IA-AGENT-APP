@@ -68,7 +68,7 @@ export async function requireUserWithOrg() {
 }
 
 export function isAdminEmail(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase());
+  const adminEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
   return adminEmails.includes(email.toLowerCase());
 }
 
@@ -77,7 +77,7 @@ export async function requireAdmin() {
 
   // Check admin email list or dev mode
   const isAdmin = isAdminEmail(user.email) || 
-    (process.env.NODE_ENV === 'development' && user.email === 'dev@local');
+    (process.env.AUTH_DEV_CREDENTIALS === 'true' && user.email === 'dev@local');
 
   if (!isAdmin) {
     redirect('/app');
