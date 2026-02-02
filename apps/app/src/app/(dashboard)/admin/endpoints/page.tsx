@@ -5,11 +5,12 @@
  * Critical for multi-tenant SMS/WhatsApp/Voice handling.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Endpoints - Admin",
 };
 

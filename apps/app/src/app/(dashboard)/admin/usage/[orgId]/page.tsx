@@ -4,13 +4,14 @@
  * Detailed usage breakdown for a specific organization.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Org Usage - Admin",
 };
 

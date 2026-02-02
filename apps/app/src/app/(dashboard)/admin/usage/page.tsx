@@ -4,13 +4,14 @@
  * Consolidated view of costs, budgets, and usage across organizations.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { StatCard } from "@/components/ui/admin-card";
 import { TableContainer } from "@/components/ui/admin-table";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Usage & Costs - Admin",
 };
 

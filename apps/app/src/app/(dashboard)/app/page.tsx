@@ -1,4 +1,4 @@
-import { Button } from '@repo/ui';
+import type { Metadata } from 'next';
 import { requireUserWithOrg } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
@@ -9,6 +9,11 @@ import {
   getSandboxStatusConfig,
   ONBOARDING_STEP_STATUS_CONFIG
 } from '@/lib/sandbox-constants';
+
+export const metadata: Metadata = {
+  title: 'Dashboard | IA Agent App',
+  description: 'Manage your AI agents and view analytics.',
+};
 
 // Step labels for display
 const STEP_LABELS: Record<string, string> = {
@@ -42,6 +47,53 @@ export default async function DashboardPage() {
     where: { orgId: org.id },
     orderBy: { createdAt: 'asc' },
   });
+
+  // Get real stats
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [
+    activeAgentsCount,
+    totalConversations,
+    messagesToday,
+    totalMessages,
+    successfulRuns,
+    totalRuns,
+    ordersCount,
+  ] = await Promise.all([
+    // Active agents = active assignments
+    prisma.agentAssignment.count({
+      where: { orgId: org.id, status: 'active' },
+    }),
+    // Total conversations last 7 days
+    prisma.conversationSession.count({
+      where: { orgId: org.id, createdAt: { gte: last7Days } },
+    }),
+    // Messages today
+    prisma.messageLog.count({
+      where: { orgId: org.id, createdAt: { gte: todayStart } },
+    }),
+    // Total messages last 7 days
+    prisma.messageLog.count({
+      where: { orgId: org.id, createdAt: { gte: last7Days } },
+    }),
+    // Successful engine runs
+    prisma.engineRun.count({
+      where: { orgId: org.id, status: 'success', createdAt: { gte: last7Days } },
+    }),
+    // Total engine runs
+    prisma.engineRun.count({
+      where: { orgId: org.id, createdAt: { gte: last7Days } },
+    }),
+    // Orders count
+    prisma.order.count({
+      where: { orgId: org.id },
+    }),
+  ]);
+
+  // Calculate response rate
+  const responseRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
 
   const totalSteps = onboardingSteps.length;
   const completedSteps = onboardingSteps.filter(
@@ -209,31 +261,79 @@ export default async function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="text-2xl">🤖</span>
+            </div>
+            <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Active</span>
+          </div>
           <div className="text-sm text-gray-500 mb-1">Active Agents</div>
-          <div className="text-2xl font-bold">0</div>
+          <div className="text-3xl font-bold text-gray-900">{activeAgentsCount}</div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <Link href="/app/conversations" className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="text-2xl">💬</span>
+            </div>
+            <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">7 days</span>
+          </div>
           <div className="text-sm text-gray-500 mb-1">Conversations</div>
-          <div className="text-2xl font-bold">0</div>
+          <div className="text-3xl font-bold text-gray-900">{totalConversations}</div>
+        </Link>
+        <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="text-2xl">📨</span>
+            </div>
+            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Today</span>
+          </div>
+          <div className="text-sm text-gray-500 mb-1">Messages</div>
+          <div className="text-3xl font-bold text-gray-900">{messagesToday}</div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="text-sm text-gray-500 mb-1">Messages Today</div>
-          <div className="text-2xl font-bold">0</div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="text-sm text-gray-500 mb-1">Response Rate</div>
-          <div className="text-2xl font-bold">--%</div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform ${responseRate >= 90 ? 'bg-green-100' : responseRate >= 70 ? 'bg-yellow-100' : 'bg-red-100'}`}>
+              <span className="text-2xl">✅</span>
+            </div>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${responseRate >= 90 ? 'text-green-600 bg-green-50' : responseRate >= 70 ? 'text-yellow-600 bg-yellow-50' : 'text-red-600 bg-red-50'}`}>
+              {responseRate >= 90 ? 'Excellent' : responseRate >= 70 ? 'Good' : 'Needs attention'}
+            </span>
+          </div>
+          <div className="text-sm text-gray-500 mb-1">Success Rate</div>
+          <div className="text-3xl font-bold text-gray-900">{responseRate}%</div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="flex gap-4">
-          <Button variant="primary">Configure Agent</Button>
-          <Button variant="outline">View Templates</Button>
-          <Button variant="outline">Settings</Button>
+      <div className="bg-white p-6 rounded-xl shadow-sm border">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Link href="/app/settings" className="flex flex-col items-center p-4 rounded-lg border hover:bg-blue-50 hover:border-blue-200 transition-colors group">
+            <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">⚙️</span>
+            <span className="text-sm font-medium text-gray-700">Settings</span>
+          </Link>
+          <Link href="/app/orders" className="flex flex-col items-center p-4 rounded-lg border hover:bg-orange-50 hover:border-orange-200 transition-colors group relative">
+            <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">📦</span>
+            <span className="text-sm font-medium text-gray-700">Orders</span>
+            {ordersCount > 0 && (
+              <span className="absolute top-2 right-2 min-w-[20px] h-5 flex items-center justify-center bg-orange-500 text-white text-xs rounded-full px-1">
+                {ordersCount}
+              </span>
+            )}
+          </Link>
+          <Link href="/app/conversations" className="flex flex-col items-center p-4 rounded-lg border hover:bg-purple-50 hover:border-purple-200 transition-colors group">
+            <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">💬</span>
+            <span className="text-sm font-medium text-gray-700">Conversations</span>
+          </Link>
+          <Link href="/app/billing" className="flex flex-col items-center p-4 rounded-lg border hover:bg-green-50 hover:border-green-200 transition-colors group">
+            <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">💳</span>
+            <span className="text-sm font-medium text-gray-700">Billing</span>
+          </Link>
+          <Link href="/app/analytics" className="flex flex-col items-center p-4 rounded-lg border hover:bg-indigo-50 hover:border-indigo-200 transition-colors group">
+            <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">📊</span>
+            <span className="text-sm font-medium text-gray-700">Analytics</span>
+          </Link>
         </div>
       </div>
     </div>

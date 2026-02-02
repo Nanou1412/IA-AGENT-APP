@@ -5,13 +5,14 @@
  * Shows: subscription status, setup fee, past_due, next invoice, MRR
  */
 
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { StatCard } from "@/components/ui/admin-card";
 import { TableContainer, StatusBadge, FilterBar, FilterSelect } from "@/components/ui/admin-table";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Billing - Admin",
 };
 

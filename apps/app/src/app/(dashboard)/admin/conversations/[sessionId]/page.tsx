@@ -4,12 +4,13 @@
  * Displays full conversation history with all turns and engine runs.
  */
 
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Conversation Detail - Admin",
 };
 

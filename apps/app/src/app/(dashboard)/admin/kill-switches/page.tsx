@@ -5,12 +5,13 @@
  * Based on KILL_SWITCHES.md documentation.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Kill Switches - Admin",
 };
 

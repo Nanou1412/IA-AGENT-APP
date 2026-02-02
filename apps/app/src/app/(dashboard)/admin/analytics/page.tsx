@@ -7,12 +7,13 @@
  * - Funnel: sessions → orders → paid
  */
 
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { StatCard } from "@/components/ui/admin-card";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Analytics - Admin",
 };
 
