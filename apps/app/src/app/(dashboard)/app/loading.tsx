@@ -1,4 +1,4 @@
-import { StatsGridSkeleton, CardSkeleton } from '@/components/ui/loading-skeletons';
+import { CardSkeleton } from '@/components/ui/loading-skeletons';
 
 export default function DashboardLoading() {
   return (
